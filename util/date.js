@@ -20,7 +20,7 @@ export function getFollowWeek(date, data) {
   const endOfWeek = getEndOfWeek(date);
   const result = data.filter((e) => {
     const getDay = new Date(e.date).getDate();
-    if(getDay <= (endOfWeek.getDate() + 1) && (getDay >= startOfWeek.getDate()) && new Date(e.date).getFullYear() == new Date().getFullYear()) {
+    if(getDay <= (endOfWeek.getDate() + 1) && (getDay >= startOfWeek.getDate()) && new Date(e.date).getFullYear() == new Date().getFullYear() && (new Date(e.date).getMonth() == new Date().getMonth())) {
       return e
     }
   });

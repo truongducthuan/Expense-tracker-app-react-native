@@ -1,13 +1,16 @@
 ### PROJECT NAME: EXPENSE STRACKER APP
 
+* The EXPENSE STRACKER APP helps users manage expenses and income sources effectively, filtered by week, month, and year, presented in list and chart form. Users can easily update their catalog and use it flexibly on many devices with their email account.
+
 # OVERVIEW 
 - Manage spending and income
-- Filter spending and income by week, month and year
+- Manage and create, edit, remove categories
+- Filter spending and income by weekly, monthly and yearly
 - Compare expense and income with chart
 - Add and manage todo daily
 - Authentication with email
 
-# LINK INSTALL: https://expo.dev//accounts/thuanthien/projects/expense-stracker-app/builds/ecd8829e-82bf-475f-be81-c6cacfee9840
+* link install: `https://expo.dev/accounts/thuanthien/projects/expense-stracker-app/builds/5ad6a67d-0cb9-4ac4-bbb8-12e38a8d250c`
 
 
 # SCREEN

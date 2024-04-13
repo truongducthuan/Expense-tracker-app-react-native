@@ -21,7 +21,7 @@
     "expo": "~49.0.15",
     "expo-app-loading": "^2.1.1",
     "expo-asset": "~8.10.1",
-    "expo-dev-client": "~2.4.12",
+    "expo-dev-client": "~2.4.13",
     "expo-file-system": "~15.4.4",
     "expo-splash-screen": "~0.20.5",
     "expo-sqlite": "~11.3.3",

@@ -189,7 +189,7 @@ function ExpenseChart({ navigation }) {
         </NavItem>
       </View>
       {title == 'income' && 
-        <TotalTypeIncome data={loadData().filter((e) => e.type === "income")} />      
+        <TotalTypeIncome />      
       }
       <View style={styles.chart}>
         <VictoryPie
