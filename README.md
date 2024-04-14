@@ -3,9 +3,9 @@
 * The EXPENSE STRACKER APP helps users manage expenses and income sources effectively, filtered by week, month, and year, presented in list and chart form. Users can easily update their catalog and use it flexibly on many devices with their email account.
 
 <div style="display: flex;">
-    <img src="link_anh_1" style="width: 30%;">
-    <img src="link_anh_2" style="width: 30%;">
-    <img src="link_anh_3" style="width: 30%;">
+    <img src="https://res.cloudinary.com/dvlbv6l2k/image/upload/v1713075785/image%20projects/Screenshot_2024-04-14-13-15-53-15_h2lvhu.jpg" style="width: 30%;">
+    <img src="https://res.cloudinary.com/dvlbv6l2k/image/upload/v1713075796/image%20projects/Screenshot_2024-04-14-13-16-10-30_sqkgwz.jpg" style="width: 30%;">
+    <img src="https://res.cloudinary.com/dvlbv6l2k/image/upload/v1713075785/image%20projects/Screenshot_2024-04-14-13-15-53-15_h2lvhu.jpg" style="width: 30%;">
 </div>
 
 # OVERVIEW 
