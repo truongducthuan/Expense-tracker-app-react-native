@@ -9,6 +9,9 @@
 ![](https://res.cloudinary.com/dvlbv6l2k/image/upload/v1713075785/image%20projects/Screenshot_2024-04-14-13-15-53-15_h2lvhu.jpg)
 {width=20%}
 
+<img src="https://res.cloudinary.com/dvlbv6l2k/image/upload/v1713075796/image%20projects/Screenshot_2024-04-14-13-16-10-30_sqkgwz.jpg" width="20%">
+
+
 
 # OVERVIEW 
 - Manage spending and income
