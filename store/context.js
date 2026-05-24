@@ -4,14 +4,16 @@ const ExpenseContext = createContext();
 
 const expenseReducer = (state, action) => {
   switch (action.type) {
-    case "SET":
-      const data = action.payload.reverse();
-      return data;
-    case "ADD":
+    case "SET": {
+      return action.payload.reverse();
+    }
+    case "ADD": {
       return [...state, action.payload];
-    case "DELETE":
+    }
+    case "DELETE": {
       return state.filter((e) => e.id !== action.payload);
-    case "UPDATE":
+    }
+    case "UPDATE": {
       const findExpenseIndex = state.findIndex(
         (e) => e.id === action.payload.id
       );
@@ -19,8 +21,8 @@ const expenseReducer = (state, action) => {
       const updateItem = { ...updateExpense, ...action.payload.data };
       const updateExpenses = [...state];
       updateExpenses[findExpenseIndex] = updateItem;
-
       return updateExpenses;
+    }
     default:
       return state;
   }
@@ -33,7 +35,6 @@ const ExpenseProvider = ({ children }) => {
   const [valueSelectChart, setValueSelectChart] = useState("Monthly");
 
   const addExpense = (expense) => {
-    console.log({ expense });
     dispatch({ type: "ADD", payload: expense });
   };
   const updateExpense = (id, expense) => {

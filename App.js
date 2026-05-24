@@ -1,24 +1,31 @@
-import "react-native-gesture-handler";
-import { Image, Pressable, Text, View } from "react-native";
+import { Image, Pressable, View } from "react-native";
+
+if (__DEV__) {
+  const prevHandler = ErrorUtils.getGlobalHandler();
+  ErrorUtils.setGlobalHandler((error, isFatal) => {
+    console.error(
+      `\n🔴 [${isFatal ? "FATAL" : "ERROR"}] ${error.message}\n${error.stack}\n`
+    );
+    prevHandler(error, isFatal);
+  });
+
+  const originalWarn = console.warn;
+  console.warn = (...args) => {
+    if (typeof args[0] === "string" && args[0].includes("Non-serializable")) return;
+    originalWarn(...args);
+  };
+}
+
 import { StatusBar } from "expo-status-bar";
 import { NavigationContainer, useNavigation } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import {
-  DrawerContentScrollView,
-  DrawerItem,
-  DrawerItemList,
-  createDrawerNavigator,
-} from "@react-navigation/drawer";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import AppLoading from "expo-app-loading";
 import * as SplashScreen from "expo-splash-screen";
-import { GoogleSignin } from "@react-native-google-signin/google-signin";
-
-import { getHeaderTitle } from "@react-navigation/elements";
 
 import ContextProvider from "./store";
+import DevErrorBoundary from "./components/ui/DevErrorBoundary";
 
 import ManageExpense from "./screens/ManageExpense";
 import AllExpense from "./screens/AllExpense";
@@ -30,43 +37,57 @@ import IconButton from "./components/ui/IconButton";
 import Authentication from "./screens/Authentication";
 import { AuthStore } from "./store/authContext";
 import { useEffect, useState } from "react";
-import {
-  deleteTableExpense,
-  deleteTableIncome,
-  initAccountDB,
-  initCategoryExpense,
-  initCategoryIncomeDB,
-} from "./util/database";
+import { initAccountDB, initCategoryExpense, initCategoryIncomeDB } from "./util/database";
 
 import SelectPicker from "./components/ui/SelectPicker";
 import AnualYear from "./screens/AnualYear";
-import User from "./screens/User";
 
 SplashScreen.preventAutoHideAsync();
-GoogleSignin.configure({
-  webClientId:
-    "300384576511-1cfq6psoqtub50pck22es3nr3adtfcai.apps.googleusercontent.com",
-});
+
+try {
+  require("@react-native-google-signin/google-signin").GoogleSignin.configure({
+    webClientId:
+      "300384576511-1cfq6psoqtub50pck22es3nr3adtfcai.apps.googleusercontent.com",
+  });
+} catch {
+  // running in Expo Go — native module unavailable
+}
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
-const Drawer = createDrawerNavigator();
 
-const IconDrawer = () => {
+function LogoutButton() {
+  const { logout } = AuthStore();
   const navigation = useNavigation();
   return (
     <Pressable
-      onPress={() => {
-        navigation.openDrawer();
+      onPress={async () => {
+        logout();
+        try {
+          await require("@react-native-google-signin/google-signin").GoogleSignin.signOut();
+        } catch {
+          // native module unavailable or user didn't sign in with Google
+        }
+        navigation.navigate("Navigation");
       }}
-      style={{ marginLeft: 24 }}
+      style={{ marginRight: 16 }}
     >
-      <Text>
-        <Ionicons name="list" color={"white"} size={24} />
-      </Text>
+      <Ionicons name="exit-outline" color="white" size={24} />
     </Pressable>
   );
-};
+}
+
+function UserAvatar() {
+  const { user } = AuthStore();
+  return (
+    <Image
+      source={
+        user?.photo ? { uri: user?.photo } : require("./assets/account.png")
+      }
+      style={{ height: 32, width: 32, borderRadius: 16, marginLeft: 16 }}
+    />
+  );
+}
 
 function ExpenseOverview() {
   return (
@@ -80,21 +101,27 @@ function ExpenseOverview() {
           backgroundColor: GlobalStyles.colors.primary500,
         },
         tabBarActiveTintColor: GlobalStyles.colors.accent500,
-        headerLeft: (props) => <IconDrawer {...props} />,
+        headerLeft: () => <UserAvatar />,
         headerRight: ({ tintColor }) => {
           if (route.name === "AllExpense") {
             return (
-              <IconButton
-                icon="add"
-                size={24}
-                color={tintColor}
-                onPress={() => {
-                  navigation.navigate("ManageExpense");
-                }}
-              />
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <IconButton
+                  icon="add"
+                  size={24}
+                  color={tintColor}
+                  onPress={() => navigation.navigate("ManageExpense")}
+                />
+                <LogoutButton />
+              </View>
             );
           }
-          return <SelectPicker />;
+          return (
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <SelectPicker />
+              <LogoutButton />
+            </View>
+          );
         },
       })}
     >
@@ -104,20 +131,19 @@ function ExpenseOverview() {
         options={{
           title: "All Expense",
           tabBarLabel: "Expense",
-          tabBarIcon: ({ color, size }) => {
-            return <Ionicons name="hourglass" size={size} color={color} />;
-          },
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="hourglass" size={size} color={color} />
+          ),
         }}
       />
-
       <Tab.Screen
         name="ExpenseChart"
         component={ExpenseChart}
         options={{
           tabBarLabel: "Chart",
-          tabBarIcon: ({ color, size }) => {
-            return <Ionicons name="bar-chart" size={size} color={color} />;
-          },
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="bar-chart" size={size} color={color} />
+          ),
         }}
       />
     </Tab.Navigator>
@@ -148,19 +174,16 @@ function ManageItemOverview() {
           backgroundColor: GlobalStyles.colors.primary500,
         },
         tabBarActiveTintColor: GlobalStyles.colors.accent500,
-        // headerLeft: (props) => <IconDrawer {...props} />,
-        headerRight: ({ tintColor }) => {
-          return (
-            <IconButton
-              icon="add"
-              size={24}
-              color={tintColor}
-              onPress={() => {
-                navigation.navigate("AddManageItem", { name: route.name });
-              }}
-            />
-          );
-        },
+        headerRight: ({ tintColor }) => (
+          <IconButton
+            icon="add"
+            size={24}
+            color={tintColor}
+            onPress={() =>
+              navigation.navigate("AddManageItem", { name: route.name })
+            }
+          />
+        ),
       })}
     >
       <Tab.Screen
@@ -169,21 +192,20 @@ function ManageItemOverview() {
         options={{
           title: "Manage Expense",
           tabBarLabel: "Expense",
-          tabBarIcon: ({ color, size }) => {
-            return <Ionicons name="trending-down" size={size} color={color} />;
-          },
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="trending-down" size={size} color={color} />
+          ),
         }}
       />
-
       <Tab.Screen
         name="ManageCategoryIncome"
         component={ManageCategoryIncome}
         options={{
           title: "Manage Income",
           tabBarLabel: "Income",
-          tabBarIcon: ({ color, size }) => {
-            return <Ionicons name="trending-up" size={size} color={color} />;
-          },
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="trending-up" size={size} color={color} />
+          ),
         }}
       />
       <Tab.Screen
@@ -192,176 +214,63 @@ function ManageItemOverview() {
         options={{
           title: "Manage Account",
           tabBarLabel: "Account",
-          tabBarIcon: ({ color, size }) => {
-            return (
-              <Ionicons
-                name="logo-closed-captioning"
-                size={size}
-                color={color}
-              />
-            );
-          },
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="logo-closed-captioning" size={size} color={color} />
+          ),
         }}
       />
     </Tab.Navigator>
   );
 }
 
-// customer drawer
-function CustomerDrawerContent(props) {
-  const { user } = AuthStore();
-  const navigation = useNavigation();
-  const { logout } = AuthStore();
-
-  return (
-    <DrawerContentScrollView {...props}>
-      <View
-        style={{
-          paddingHorizontal: 12,
-        }}
-      >
-        <Image
-          source={
-            user?.photo ? { uri: user?.photo } : require("./assets/account.png")
-          }
-          style={{ height: 100, width: 100 }}
-        />
-        <View>
-          {user?.name && <Text style={{ marginTop: 2 }}>{user.name}</Text>}
-          <Text style={{ marginTop: 2 }}>{user.email}</Text>
-        </View>
-      </View>
-      <Text
-        style={{
-          borderBottomColor: GlobalStyles.colors.primary50,
-          borderBottomWidth: 1,
-          marginBottom: 20,
-        }}
-      ></Text>
-      <DrawerItemList {...props} />
-      <DrawerItem
-        label={"Logout"}
-        onPress={async () => {
-          logout();
-          await GoogleSignin.signOut();
-          navigation.navigate("Navigation");
-        }}
-        labelStyle={{ color: GlobalStyles.colors.error500 }}
-        icon={({ focused, color, size }) => (
-          <Ionicons
-            color={GlobalStyles.colors.error500}
-            size={24}
-            name={!focused && "exit"}
-          />
-        )}
-      />
-    </DrawerContentScrollView>
-  );
-}
-
-function DrawNavigation() {
-  return (
-    <Drawer.Navigator
-      screenOptions={{
-        headerStyle: { backgroundColor: "#351401" },
-        headerTintColor: "#fff",
-        sceneContainerStyle: { backgroundColor: "#3f2f25" },
-        drawerContentStyle: { backgroundColor: "#351401" },
-        drawerInactiveTintColor: GlobalStyles.colors.primary500,
-        drawerActiveTintColor: "#351401",
-        drawerActiveBackgroundColor: "#e4baa1",
-        drawerItemStyle: {
-          fontSize: 80,
-          color: "red",
-        },
-      }}
-      drawerContent={(props) => <CustomerDrawerContent {...props} />}
-    >
-      <Drawer.Screen
-        name="ExpenseOverview"
-        component={ExpenseOverview}
-        options={{
-          title: "Home",
-          headerShown: false,
-          drawerIcon: ({ color, size }) => (
-            <Ionicons name="home" color={color} size={size} />
-          ),
-        }}
-      />
-      <Drawer.Screen
-        name="Settings"
-        component={ExpenseOverview}
-        options={{
-          title: "Settings",
-          headerShown: false,
-          drawerIcon: ({ color, size }) => (
-            <Ionicons name="settings" color={color} size={size} />
-          ),
-        }}
-      />
-    </Drawer.Navigator>
-  );
-}
-
 function AuthenticationApp() {
   return (
     <Stack.Navigator>
-      <Stack.Screen
-        name="Authentication"
-        component={Authentication}
-        options={
-          {
-            // headerShown: false,
-          }
-        }
-      />
+      <Stack.Screen name="Authentication" component={Authentication} />
     </Stack.Navigator>
   );
 }
 
 function Navigation() {
   const { isAuthenticated } = AuthStore();
-
-  return <>{!isAuthenticated ? <AuthenticationApp /> : <DrawNavigation />}</>;
+  return <>{!isAuthenticated ? <AuthenticationApp /> : <ExpenseOverview />}</>;
 }
 
 const Root = () => {
   const { login } = AuthStore();
-  const [isLogin, setIsLogin] = useState(true);
+  const [isReady, setIsReady] = useState(false);
+
   useEffect(() => {
-    const getToken = async () => {
+    const init = async () => {
       try {
         const value = await AsyncStorage.getItem("infoUser");
         if (value) {
-          const res = JSON.parse(value);
-          login(res);
-          await SplashScreen.hideAsync();
+          login(JSON.parse(value));
         }
-        setIsLogin(false);
-      } catch (err) {
-        console.error(err);
+      } catch {
+        // failed to load stored session - proceed to login screen
+      } finally {
+        setIsReady(true);
+        SplashScreen.hideAsync();
       }
     };
-    getToken();
+    init();
   }, []);
-  if (isLogin) {
-    return <AppLoading />;
-  }
+
+  if (!isReady) return null;
 
   return <Navigation />;
 };
 
 export default function App() {
   useEffect(() => {
-    // deleteTableExpense();
-    // deleteTableIncome();
     initCategoryIncomeDB();
     initCategoryExpense();
     initAccountDB();
   }, []);
 
   return (
-    <>
+    <DevErrorBoundary>
       <StatusBar style="auto" />
       <ContextProvider>
         <NavigationContainer>
@@ -376,52 +285,31 @@ export default function App() {
             <Stack.Screen
               name="Navigation"
               component={Root}
-              options={{
-                headerShown: false,
-              }}
-            />
-            <Stack.Screen
-              name="DrawNavigation"
-              component={DrawNavigation}
-              options={{
-                headerShown: false,
-              }}
+              options={{ headerShown: false }}
             />
             <Stack.Screen
               name="ManageExpense"
               component={ManageExpense}
-              options={{
-                // title: "Manage Expense",
-                presentation: "modal", //2 task add and edit
-              }}
+              options={{ presentation: "modal" }}
             />
             <Stack.Screen
               name="AddManageItem"
               component={AddManageItem}
-              options={{
-                presentation: "modal",
-              }}
+              options={{ presentation: "modal" }}
             />
             <Stack.Screen
               name="AnnualYear"
               component={AnualYear}
-              options={{
-                title: "Annual statistical",
-              }}
+              options={{ title: "Annual statistical" }}
             />
             <Stack.Screen
               name="ManageItem"
               component={ManageItemOverview}
-              options={{
-                headerShown: false,
-                drawerIcon: ({ color, size }) => (
-                  <Ionicons name="create" color={color} size={size} />
-                ),
-              }}
+              options={{ headerShown: false }}
             />
           </Stack.Navigator>
         </NavigationContainer>
       </ContextProvider>
-    </>
+    </DevErrorBoundary>
   );
 }

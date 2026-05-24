@@ -1,11 +1,4 @@
-import React, { useState } from "react";
-import {
-  StyleSheet,
-  View,
-  Text,
-  TouchableWithoutFeedback,
-  Pressable,
-} from "react-native";
+import { StyleSheet, View, Text, Pressable } from "react-native";
 import PrimaryInput from "./ui/PrimaryInput";
 import { GlobalStyles } from "../constants/styles";
 
@@ -30,7 +23,7 @@ const ExpenseForm = ({
     setExpenses((state) => {
       return {
         ...state,
-        date: new Date(e),
+        date: e,
       };
     });
   };

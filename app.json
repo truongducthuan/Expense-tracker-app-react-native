@@ -14,13 +14,13 @@
     "assetBundlePatterns": [
       "**/*"
     ],
-    "updates": {
-      "fallbackToCacheTimeout": 0
-    },
     "ios": {
       "supportsTablet": true,
       "buildNumber": "1.0.0",
-      "bundleIdentifier": "com.thuanthien.expensestrackerapp"
+      "bundleIdentifier": "com.thuanthien.expensestrackerapp",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -38,11 +38,6 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    },
-    "extra": {
-      "eas": {
-        "projectId": "5bde18a4-20af-4c49-831d-0b324fef5eb1"
-      }
     },
     "plugins": [
       "@react-native-google-signin/google-signin"

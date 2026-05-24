@@ -10,21 +10,23 @@ const Context = createContext({
 
 const reducer = (state, action) => {
   switch (action.type) {
-    case "SET":
-      const data = action.payload.reverse();
-      return data;
-    case "ADD":
-      const newData = [...state, action.payload];
-      return newData;
-    case "EDIT":
+    case "SET": {
+      return action.payload.reverse();
+    }
+    case "ADD": {
+      return [...state, action.payload];
+    }
+    case "EDIT": {
       const findIndexData = state.findIndex((e) => e.id === action.payload.id);
       const updateData = state[findIndexData];
       const updateItem = { ...updateData, ...action.payload.data };
       const cpState = [...state];
       cpState[findIndexData] = updateItem;
       return cpState;
-    case "DELETE":
+    }
+    case "DELETE": {
       return state.filter((c) => c.id !== action.payload);
+    }
     default:
       return state;
   }

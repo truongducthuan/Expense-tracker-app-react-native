@@ -1,26 +1,7 @@
-import React, {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useState,
-} from "react";
-import {
-  Text,
-  View,
-  StyleSheet,
-  FlatList,
-  ScrollView,
-  Pressable,
-} from "react-native";
+import { useEffect, useLayoutEffect, useState } from "react";
+import { View, StyleSheet, ScrollView } from "react-native";
 
-import {
-  VictoryPie,
-  VictoryChart,
-  VictoryTheme,
-  VictoryLabel,
-  VictoryScatter,
-} from "victory-native";
-import Svg, { Path } from "react-native-svg";
+import { VictoryPie, VictoryTheme, VictoryLabel } from "victory-native";
 import { ExpenseStore } from "../store/context";
 import NavItem from "../components/ui/NavItem";
 import { colorsArray } from "../constants/color";
@@ -82,10 +63,12 @@ function ExpenseChart({ navigation }) {
     });
   });
 
-  if (valueSelectChart === "total") {
-    setValueSelectChart("monthly");
-    navigation.navigate("AnnualYear");
-  }
+  useEffect(() => {
+    if (valueSelectChart === "total") {
+      setValueSelectChart("monthly");
+      navigation.navigate("AnnualYear");
+    }
+  }, [valueSelectChart]);
 
   const loadData = () => {
     const today = new Date();
