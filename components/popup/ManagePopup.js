@@ -1,5 +1,5 @@
-import React, { useLayoutEffect, useState } from "react";
-import { FlatList, StyleSheet, View } from "react-native";
+import { useLayoutEffect, useState } from "react";
+import { StyleSheet, View } from "react-native";
 import HeaderPopup from "../ui/HeaderPopup";
 import ListItem from "./ListItem";
 import { CategoryStore } from "../../store/categoryContext";
@@ -34,7 +34,7 @@ const ManagePopup = ({ setIsPopup, name, titleName }) => {
     fetchItem();
   }, [titleName, name]);
 
-  if (setItems.length) {
+  if (items.length) {
     return (
       <View style={styles.container}>
         <HeaderPopup

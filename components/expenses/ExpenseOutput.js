@@ -1,17 +1,12 @@
-import React, { useState, useLayoutEffect, useEffect } from "react";
-import { View, FlatList, StyleSheet, Text, Pressable } from "react-native";
+import { useState, useLayoutEffect, useEffect } from "react";
+import { View, StyleSheet, Text, Pressable } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 
 import ExpenseSummary from "./ExpenseSummary";
 import ExpenseList from "./ExpenseList";
 import HeaderTime from "../ui/HeaderTime";
 import { GlobalStyles } from "../../constants/styles";
-import {
-  getDateMinuteDays,
-  getFollowMonth,
-  getFollowWeek,
-  getFollowYear,
-} from "../../util/date";
+import { getFollowMonth, getFollowWeek, getFollowYear } from "../../util/date";
 import { ExpenseStore } from "../../store/context";
 
 const ExpenseOutput = ({ fallBack }) => {
@@ -30,18 +25,16 @@ const ExpenseOutput = ({ fallBack }) => {
     const date = day.getDate();
     const month = day.getMonth() + 1;
     const year = day.getFullYear();
-    setCurrTimeValue((state) => {
-      if (typeFollow === "monthly") {
-        setCurrTimeLabel("m");
-        return month;
-      } else if (typeFollow === "yearly") {
-        setCurrTimeLabel("y");
-        return year;
-      } else {
-        setCurrTimeLabel(`from ${day.getDate() - 7}`);
-        return date;
-      }
-    });
+    if (typeFollow === "monthly") {
+      setCurrTimeLabel("m");
+      setCurrTimeValue(month);
+    } else if (typeFollow === "yearly") {
+      setCurrTimeLabel("y");
+      setCurrTimeValue(year);
+    } else {
+      setCurrTimeLabel(`from ${day.getDate() - 7}`);
+      setCurrTimeValue(date);
+    }
   }, [typeFollow]);
 
   // Set header follow time
@@ -84,9 +77,7 @@ const ExpenseOutput = ({ fallBack }) => {
     <View style={styles.container}>
       <View style={styles.nav}>
         <Pressable
-          style={({ pressed }) => {
-            pressed && styles.pressed;
-          }}
+          style={({ pressed }) => pressed && styles.pressed}
           onPress={handleFollow.bind(null, "weekly")}
         >
           <Text
@@ -102,9 +93,7 @@ const ExpenseOutput = ({ fallBack }) => {
           </Text>
         </Pressable>
         <Pressable
-          style={({ pressed }) => {
-            pressed && styles.pressed;
-          }}
+          style={({ pressed }) => pressed && styles.pressed}
           onPress={handleFollow.bind(null, "monthly")}
         >
           <Text
@@ -120,9 +109,7 @@ const ExpenseOutput = ({ fallBack }) => {
           </Text>
         </Pressable>
         <Pressable
-          style={({ pressed }) => {
-            pressed && styles.pressed;
-          }}
+          style={({ pressed }) => pressed && styles.pressed}
           onPress={handleFollow.bind(null, "yearly")}
         >
           <Text
@@ -138,9 +125,7 @@ const ExpenseOutput = ({ fallBack }) => {
           </Text>
         </Pressable>
         <Pressable
-          style={({ pressed }) => {
-            pressed && styles.pressed;
-          }}
+          style={({ pressed }) => pressed && styles.pressed}
           onPress={() => {
             navigation.navigate("AnnualYear");
           }}

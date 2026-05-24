@@ -3,33 +3,38 @@ import {
   StyleSheet,
   Text,
   View,
-  Button,
   Pressable,
   Alert,
   Image,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { GoogleSigninButton } from "@react-native-google-signin/google-signin";
 
 import PrimaryInput from "../components/ui/PrimaryInput";
 import { GlobalStyles } from "../constants/styles";
 import PrimaryButton from "../components/ui/PrimaryButton";
 import Loading from "../components/ui/Loading";
-import { loginApi, signUpApi, loginWithGoogle } from "../api/auth";
+import { loginApi, signUpApi, loginWithGoogle, getStatusCodes } from "../api/auth";
 import ErrorOverlay from "../components/ui/ErrorOverlay";
 import { AuthStore } from "../store/authContext";
 
+// GoogleSigninButton is a native component — not available in Expo Go.
+// Resolved at runtime so the import never crashes in Expo Go.
+let GoogleSigninButton = null;
+try {
+  GoogleSigninButton =
+    require("@react-native-google-signin/google-signin").GoogleSigninButton;
+} catch {
+  // running in Expo Go — Google Sign-In button will be hidden
+}
+
 const Authentication = () => {
   const navigation = useNavigation();
-  const { login, isAuthenticated } = AuthStore();
+  const { login } = AuthStore();
 
   const [isAuthentication, setIsAuthentication] = useState(false);
   const [isLogin, setIsLogin] = useState(true);
   const [errorMessage, setErrorMessage] = useState(null);
-  const [valueInput, setValueInput] = useState({
-    email: "",
-    password: "",
-  });
+  const [valueInput, setValueInput] = useState({ email: "", password: "" });
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -39,85 +44,76 @@ const Authentication = () => {
   }, [navigation, isLogin]);
 
   function handleInputValue(name, e) {
-    const cpState = { ...valueInput };
-    cpState[name] = e;
-    setValueInput(cpState);
+    setValueInput((prev) => ({ ...prev, [name]: e }));
   }
 
-  const clearInputValue = () => {
-    setValueInput({
-      email: "",
-      password: "",
-    });
-  };
+  const clearInputValue = () => setValueInput({ email: "", password: "" });
 
   const handleConfirm = async () => {
     if (!valueInput.email.includes("@") || valueInput.password.length < 6) {
       Alert.alert("Invalid input!", "Please check your input values");
-    } else {
-      setIsAuthentication(true);
-      if (!isLogin) {
-        try {
-          await signUpApi(valueInput.email, valueInput.password);
-          clearInputValue();
-          setIsLogin(true);
-        } catch (err) {
-          console.log(err);
-          setErrorMessage("Could not create user - please try again!");
-        }
-      } else {
-        try {
-          const data = await loginApi(valueInput.email, valueInput.password);
-          // console.log({ data });
-          const result = {
-            email: data.email,
-            name: data.name,
-            photo: data?.photo,
-            token: data.idToken,
-            id: data.localId,
-          };
-          login(result);
-          clearInputValue();
-          navigation.navigate("DrawNavigation", { screen: "DrawNavigation" });
-        } catch (err) {
-          // isAuthenticated(false);
-          setErrorMessage(
-            "Could not login with this account - please try again!"
-          );
-        }
-      }
-      setIsAuthentication(false);
+      return;
     }
+    setIsAuthentication(true);
+    if (!isLogin) {
+      try {
+        await signUpApi(valueInput.email, valueInput.password);
+        clearInputValue();
+        setIsLogin(true);
+      } catch {
+        setErrorMessage("Could not create user - please try again!");
+      }
+    } else {
+      try {
+        const data = await loginApi(valueInput.email, valueInput.password);
+        login({
+          email: data.email,
+          name: data.name,
+          photo: data?.photo,
+          token: data.idToken,
+          id: data.localId,
+        });
+        clearInputValue();
+        navigation.navigate("DrawNavigation", { screen: "DrawNavigation" });
+      } catch {
+        setErrorMessage("Could not login with this account - please try again!");
+      }
+    }
+    setIsAuthentication(false);
   };
 
   const handleLoginWithGoogle = async () => {
-    const userInfo = await loginWithGoogle();
-    // console.log(userInfo.user);
-    const result = {
-      email: userInfo.user.email,
-      name: userInfo.user.name,
-      photo: userInfo.user?.photo,
-      token: userInfo.idToken,
-      id: userInfo.user.id,
-    };
-    login(result);
-    // await signUpApi(userInfo.user.email, userInfo.user.id);
-    navigation.navigate("DrawNavigation", { screen: "DrawNavigation" });
+    try {
+      const data = await loginWithGoogle();
+      if (!data) return; // user cancelled
+      login({
+        email: data.user.email,
+        name: data.user.name,
+        photo: data.user?.photo,
+        token: data.idToken,
+        id: data.user.id,
+      });
+      navigation.navigate("DrawNavigation", { screen: "DrawNavigation" });
+    } catch (err) {
+      const statusCodes = getStatusCodes();
+      if (err.code === statusCodes.IN_PROGRESS) {
+        Alert.alert("Please wait", "Sign in is already in progress.");
+      } else if (err.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        Alert.alert("Error", "Google Play Services not available or outdated.");
+      } else {
+        Alert.alert("Sign in failed", "Could not sign in with Google. Please try again.");
+      }
+    }
   };
 
   if (errorMessage) {
     return (
-      <ErrorOverlay
-        message={errorMessage}
-        onPress={() => {
-          setErrorMessage(null);
-        }}
-      />
+      <ErrorOverlay message={errorMessage} onPress={() => setErrorMessage(null)} />
     );
   }
 
   if (isAuthentication) {
-    return <Loading message={!isLogin ? "Creating user..." : "Logging..."} />;
+    return <Loading message={!isLogin ? "Creating user..." : "Logging in..."} />;
   }
 
   return (
@@ -131,6 +127,7 @@ const Authentication = () => {
           textInputConfig={{
             onChangeText: handleInputValue.bind(this, "email"),
             keyboardType: "email-address",
+            autoCapitalize: "none",
           }}
           style={styles.rowInput}
           value={valueInput.email}
@@ -142,7 +139,6 @@ const Authentication = () => {
           label={"Password"}
           textInputConfig={{
             onChangeText: handleInputValue.bind(this, "password"),
-            // keyboardType: "visible-password",
             secureTextEntry: true,
           }}
           style={styles.rowInput}
@@ -151,20 +147,13 @@ const Authentication = () => {
         />
       </View>
       <View style={styles.containerButton}>
-        <PrimaryButton
-          onPress={handleConfirm}
-          style={styles.button}
-          mode={"flat"}
-          colorText={"login"}
-        >
+        <PrimaryButton onPress={handleConfirm} style={styles.button} mode={"flat"} colorText={"login"}>
           {isLogin ? "Log In" : "Sign Up"}
         </PrimaryButton>
       </View>
       <View>
         <Pressable
-          onPress={() => {
-            setIsLogin(!isLogin);
-          }}
+          onPress={() => setIsLogin((prev) => !prev)}
           style={({ pressed }) => pressed && styles.pressed}
         >
           <Text style={styles.buttonRedirect}>
@@ -172,11 +161,15 @@ const Authentication = () => {
           </Text>
         </Pressable>
       </View>
-      <Text style={{ color: GlobalStyles.colors.primary50 }}>Or</Text>
-      <Pressable onPress={handleLoginWithGoogle} style={{ marginVertical: 20 }}>
-        <GoogleSigninButton />
-        {/* <Text>Login</Text> */}
-      </Pressable>
+
+      {GoogleSigninButton && (
+        <>
+          <Text style={{ color: GlobalStyles.colors.primary50, marginTop: 8 }}>Or</Text>
+          <Pressable onPress={handleLoginWithGoogle} style={{ marginVertical: 20 }}>
+            <GoogleSigninButton />
+          </Pressable>
+        </>
+      )}
     </View>
   );
 };
@@ -187,10 +180,8 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: GlobalStyles.colors.primary200,
     flex: 1,
-    // justifyContent: "center",
     paddingTop: 80,
     alignItems: "center",
-    // marginTop: 20,
     paddingHorizontal: 20,
   },
   rowInput: {
@@ -200,7 +191,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
   },
-
   containerButton: {
     backgroundColor: GlobalStyles.colors.error500,
     width: "97%",

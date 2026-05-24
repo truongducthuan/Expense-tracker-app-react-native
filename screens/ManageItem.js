@@ -110,8 +110,16 @@ const ManageItem = ({ name }) => {
       data = accounts;
     }
   }
-  if (isLoading || data.length === 0) {
+  if (isLoading) {
     return <Loading />;
+  }
+
+  if (data.length === 0) {
+    return (
+      <View style={[styles.container, { alignItems: "center", marginTop: 40 }]}>
+        <Text style={{ color: "#888", fontSize: 16 }}>No items yet. Tap + to add one.</Text>
+      </View>
+    );
   }
 
   return (
