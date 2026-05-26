@@ -12,7 +12,6 @@ import {
 } from "@react-navigation/drawer";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import AppLoading from "expo-app-loading";
 import * as SplashScreen from "expo-splash-screen";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 
@@ -335,17 +334,18 @@ const Root = () => {
         if (value) {
           const res = JSON.parse(value);
           login(res);
-          await SplashScreen.hideAsync();
         }
-        setIsLogin(false);
       } catch (err) {
         console.error(err);
+      } finally {
+        setIsLogin(false);
+        await SplashScreen.hideAsync();
       }
     };
     getToken();
   }, []);
   if (isLogin) {
-    return <AppLoading />;
+    return null;
   }
 
   return <Navigation />;

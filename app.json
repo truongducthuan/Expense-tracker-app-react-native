@@ -39,13 +39,16 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
+    "plugins": [
+      "@react-native-google-signin/google-signin",
+      "expo-asset",
+      "expo-sqlite"
+    ],
     "extra": {
       "eas": {
-        "projectId": "5bde18a4-20af-4c49-831d-0b324fef5eb1"
+        "projectId": "7db209aa-666c-4107-90c3-7e2ad38fbebd"
       }
     },
-    "plugins": [
-      "@react-native-google-signin/google-signin"
-    ]
+    "owner": "thuantd"
   }
 }
