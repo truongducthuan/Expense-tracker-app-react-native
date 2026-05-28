@@ -1,7 +1,5 @@
 import axios from "axios";
-
-const URL =
-  "https://react-native-a2440-default-rtdb.asia-southeast1.firebasedatabase.app";
+import { FIREBASE_DB_URL as URL } from "./config";
 
 // Expense
 export const storeExpense = async (expense) => {
@@ -39,62 +37,3 @@ export const updateExpenses = async (id, expense) => {
 export const deleteExpenses = async (id) => {
   return axios.delete(`${URL}/expenses/${id}.json`);
 };
-
-// Income
-// export const addIncomeApi = async (data) => {
-//   const res = await axios.post(`${URL}/income.json`, data);
-//   const id = res.data.name;
-//   return id;
-// };
-
-// export const fetchIncomeApi = async () => {
-//   const res = await axios.get(`${URL}/income.json`);
-//   const incomes = [];
-//   for (const key in res.data) {
-//     const income = {
-//       id: key,
-//       name: res.data[key].name,
-//     };
-//     incomes.push(income);
-//   }
-
-//   return incomes;
-// };
-
-// export const deleteIncomeApi = async (id) => {
-//   return axios.delete(`${URL}/income/${id}.json`);
-// };
-
-// export const updateIncomeApi = async (id, data) => {
-//   // console.log("api", data);
-//   return axios.put(`${URL}/income/${id}.json`, data);
-// };
-
-// Account
-// export const addAccountApi = async (data) => {
-//   const res = await axios.post(`${URL}/account.json`, data);
-//   const id = res.data.name;
-//   return id;
-// };
-
-// export const getAccountApi = async () => {
-//   const res = await axios.get(`${URL}/account.json`);
-//   const accounts = [];
-//   for (const key in res.data) {
-//     const account = {
-//       id: key,
-//       name: res.data[key].name,
-//     };
-//     accounts.push(account);
-//   }
-
-//   return accounts;
-// };
-
-// export const deleteAccountApi = async (id) => {
-//   return axios.delete(`${URL}/account/${id}.json`);
-// };
-
-// export const updateAccountApi = async (id, data) => {
-//   return axios.put(`${URL}/account/${id}.json`, data);
-// };

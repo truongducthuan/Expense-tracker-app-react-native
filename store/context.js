@@ -1,4 +1,5 @@
 import { createContext, useContext, useReducer, useState } from "react";
+import { fetchExpenses } from "../api/http";
 
 const ExpenseContext = createContext();
 
@@ -46,13 +47,19 @@ const ExpenseProvider = ({ children }) => {
     dispatch({ type: "SET", payload: expenses });
   };
 
-  // console.log({ expenses });
+  const refreshExpenses = async (userEmail) => {
+    const data = await fetchExpenses();
+    const userExpenses = data.filter((i) => i.user === userEmail);
+    dispatch({ type: "SET", payload: userExpenses });
+  };
+
   const values = {
     addExpense,
     updateExpense,
     deleteExpense,
     expenses,
     setExpense,
+    refreshExpenses,
     valueInputCategory,
     setValueInputCategory,
     valueInputAccount,

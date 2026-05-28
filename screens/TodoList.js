@@ -1,10 +1,13 @@
-import React, { useEffect, useLayoutEffect, useState } from "react";
-import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
-import { AntDesign } from '@expo/vector-icons';
-import {Calendar, Agenda, CalendarList} from 'react-native-calendars';
-import * as TaskManager from 'expo-task-manager';
-
-import Confetti from "../components/todoList/confetti/Confetti";
+import { useEffect, useLayoutEffect, useState } from "react";
+import {
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { AntDesign } from "@expo/vector-icons";
+import { CalendarList } from "react-native-calendars";
 
 import { getTodoList, updateTodo } from "../util/database";
 import { TodoListStore } from "../store/todo/todoList";
@@ -12,10 +15,9 @@ import { addTodoListApi } from "../api/todo";
 import { AuthStore } from "../store/authContext";
 import IconButton from "../components/ui/IconButton";
 import TodoItem from "../components/todoList/TodoItem";
-import { GlobalStyles } from "../constants/styles";
 import { checkFormat } from "../util/format";
-import AgendaScreen from "../components/todoList/Agenda";
 import PrimaryButton from "../components/ui/PrimaryButton";
+import useRefresh from "../hooks/useRefresh";
 
 const TodoList = ({navigation}) => {
   const { setTodoList, todoList } = TodoListStore();
@@ -26,12 +28,14 @@ const TodoList = ({navigation}) => {
   const [isCalendar, setIsCalendar] = useState(false);
 
   const fetchTodoList = () => {
-    getTodoList().then(res => {
+    return getTodoList().then(res => {
       setTodoList(res)
       const todoDone = res.filter(todo => todo.isDone == 1);
       setCheckList(todoDone)
     }).catch(err => console.error(err))
   }
+
+  const { refreshing, handleRefresh } = useRefresh(fetchTodoList);
 
   useEffect(() => {
     fetchTodoList();
@@ -105,9 +109,7 @@ const TodoList = ({navigation}) => {
         fetchTodoList();
       })
     });
-    addTodoListApi(data).then(res => {
-      console.log('ok');
-    }).catch(err => console.log(err))
+    addTodoListApi(data).catch((err) => console.error(err));
   }
 
   if(isCalendar) {
@@ -132,15 +134,13 @@ const TodoList = ({navigation}) => {
             <Text style={{color: '#12590d96'}}>completed</Text>
           </View>
         </View>
-        <FlatList data={todoList} keyExtractor={(item) => item.id} renderItem={({item, index}) => <TodoItem item={item} index={index} onPress={() => onCheck(item)} style={styleColor} />} />
+        <FlatList data={todoList} keyExtractor={(item) => item.id} renderItem={({item, index}) => <TodoItem item={item} index={index} onPress={() => onCheck(item)} style={styleColor} />} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />} />
 
         <View>
           <Text style={{fontSize: 12, fontStyle: 'italic', color: '#2dab0a'}}>Please, submit your todo list at the end of the day!</Text>
           <PrimaryButton onPress={onSubmit} style={styles.btnSubmit}>Submit</PrimaryButton>
         </View>
       </View>
-
-      {/* {todo.length == checkList.length && <Confetti />} */}
     </View>
   );
 };

@@ -1,13 +1,6 @@
 import { useState, useEffect } from "react";
-import {
-  StyleSheet,
-  View,
-  Text,
-  TouchableWithoutFeedback,
-  Pressable,
-} from "react-native";
-// import DateTimePicker from '@react-native-community/datetimepicker';
-import {Calendar, LocaleConfig} from 'react-native-calendars';
+import { StyleSheet, View, Text, Pressable } from "react-native";
+import { Calendar } from "react-native-calendars";
 
 import PrimaryInput from "./ui/PrimaryInput";
 import { GlobalStyles } from "../constants/styles";

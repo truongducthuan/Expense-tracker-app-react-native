@@ -1,7 +1,5 @@
 import axios from "axios";
-
-const URL =
-  "https://react-native-a2440-default-rtdb.asia-southeast1.firebasedatabase.app";
+import { FIREBASE_DB_URL as URL } from "./config";
 
 export const addTodoListApi = async (todo) => {
   const res = await axios.post(`${URL}/todo.json`, todo);

@@ -1,5 +1,5 @@
-import { useEffect, useLayoutEffect, useState } from "react";
-import { Alert, StyleSheet, Text, View } from "react-native";
+import { useLayoutEffect, useState } from "react";
+import { Alert, StyleSheet, View } from "react-native";
 import PrimaryInput from "../components/ui/PrimaryInput";
 import PrimaryButton from "../components/ui/PrimaryButton";
 import { CategoryStore } from "../store/categoryContext";
@@ -26,7 +26,7 @@ const AddManageItem = ({ route, navigation }) => {
   const [isLoading, setIsLoading] = useState(false);
   const name = route.params.name;
   const id = route.params?.id;
-  // console.log({ name });
+
   useLayoutEffect(() => {
     const nameHeader = () => {
       if (name === "ManageCategoryIncome") {

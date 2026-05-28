@@ -1,33 +1,33 @@
-import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 import { GlobalStyles } from "../../constants/styles";
-import NavItem from "../ui/NavItem";
+
+const TABS = [
+  { type: "expense", icon: "trending-down-outline", color: "#e53935" },
+  { type: "income", icon: "trending-up-outline", color: "#2e9e0a" },
+  { type: "transfer", icon: "swap-horizontal", color: "#1e88e5" },
+];
 
 const NavExpense = ({ onPress, titleName }) => {
   return (
     <View style={styles.nav}>
-      <NavItem
-        onPress={onPress}
-        style={styles.horizon}
-        isNav={titleName === "expense"}
-      >
-        Expense
-      </NavItem>
-      <NavItem
-        onPress={onPress}
-        isNav={titleName === "income"}
-        style={styles.horizon}
-      >
-        Income
-      </NavItem>
-      <NavItem
-        onPress={onPress}
-        isNav={titleName === "transfer"}
-        style={styles.horizon}
-      >
-        Transfer
-      </NavItem>
+      {TABS.map(({ type, icon, color }) => {
+        const active = titleName === type;
+        return (
+          <Pressable
+            key={type}
+            onPress={() => onPress(type)}
+            style={({ pressed }) => [
+              styles.button,
+              { backgroundColor: active ? color : GlobalStyles.colors.primary50 },
+              pressed && styles.pressed,
+            ]}
+          >
+            <Ionicons name={icon} size={24} color={active ? "#fff" : color} />
+          </Pressable>
+        );
+      })}
     </View>
   );
 };
@@ -42,8 +42,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     paddingTop: 8,
   },
-  horizon: {
-    paddingHorizontal: 28,
-    paddingVertical: 4,
+  button: {
+    flex: 1,
+    marginHorizontal: 6,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: "center",
+    backgroundColor: GlobalStyles.colors.primary50,
+  },
+  pressed: {
+    opacity: 0.6,
   },
 });

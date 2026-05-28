@@ -5,480 +5,158 @@ const categoryIncomeDB = SQLite.openDatabase("categories_income.db");
 const accountDB = SQLite.openDatabase("accounts.db");
 const todoDB = SQLite.openDatabase("todoList.db");
 
-// Expense
-const categoriesExpenseInit = () => {
-  const data = [
-    "Food",
-    "Health",
-    "Apparel",
-    "Transportation",
-    "Accommodation",
-    "Event",
-    "Element",
-    "Self-development",
-    "Entertainment",
-    "Book",
-    "Other",
-  ];
-  const result = new Promise((resolve, reject) => {
-    categoryExpenseDB.transaction((tx) => {
+// Promisified executeSql: resolves with the SQL result, rejects with the error.
+const execute = (db, sql, params = []) =>
+  new Promise((resolve, reject) => {
+    db.transaction((tx) => {
       tx.executeSql(
-        `INSERT OR IGNORE INTO categories_expense (name) VALUES (?), (?), (?), (?), (?), (?), (?), (?), (?), (?), (?)`,
-        [...data],
-        () => {
-          resolve();
-        },
-        (_, err) => {
-          reject(err);
-        }
-      );
-    });
-  });
-
-  return result;
-};
-
-export const initCategoryExpense = () => {
-  const promise = new Promise((resolve, reject) => {
-    categoryExpenseDB.transaction((tx) => {
-      tx.executeSql(
-        `CREATE TABLE IF NOT EXISTS categories_expense (
-          id INTEGER PRIMARY KEY NOT NULL,
-          name TEXT UNIQUE NOT NULL
-        )`,
-        [],
-        () => {
-          categoriesExpenseInit()
-            .then((_, result) => {
-              resolve();
-            })
-            .catch((err) => {
-              console.log(err);
-            });
-        },
-        (_, error) => reject(error)
-      );
-    });
-  });
-
-  return promise;
-};
-
-export const fetchCategoriesExpenseDB = () => {
-  const promise = new Promise((resolve, reject) => {
-    categoryExpenseDB.transaction((tx) => {
-      tx.executeSql(
-        "SELECT * FROM categories_expense ORDER BY id DESC",
-        [],
-        (_, result) => {
-          const categories = [];
-          for (const db of result.rows._array) {
-            categories.push({
-              name: db.name,
-              id: db.id,
-            });
-          }
-          // console.log("categoryDB", categories);
-          resolve(categories);
-        },
-        (_, err) => reject(err)
-      );
-    });
-  });
-  return promise;
-};
-
-export const addExpenseCategory = (name) => {
-  const promise = new Promise((resolve, reject) => {
-    categoryExpenseDB.transaction((tx) => {
-      tx.executeSql(
-        `
-      INSERT INTO categories_expense (
-        name
-      ) VALUES (?)`,
-        [name],
-        (_, res) => resolve(res.insertId),
+        sql,
+        params,
+        (_, result) => resolve(result),
         (_, err) => reject(err)
       );
     });
   });
 
-  return promise;
+const toNamedRows = (result) =>
+  result.rows._array.map((row) => ({ name: row.name, id: row.id }));
+
+// Inserts default rows (idempotent thanks to INSERT OR IGNORE on the UNIQUE name).
+const seed = (db, table, names) => {
+  const placeholders = names.map(() => "(?)").join(", ");
+  return execute(
+    db,
+    `INSERT OR IGNORE INTO ${table} (name) VALUES ${placeholders}`,
+    names
+  );
 };
 
-export const updateExpenseCategory = (name, id) => {
-  const promise = new Promise((resolve, reject) => {
-    categoryExpenseDB.transaction((tx) => {
-      tx.executeSql(
-        `UPDATE categories_expense SET name = (?) WHERE id = (?)`,
-        [name, id],
-        (_, res) => resolve(res),
-        (_, err) => reject(err)
-      );
-    });
-  });
-  return promise;
-};
+const createNamedTable = (db, table, seedNames) =>
+  execute(
+    db,
+    `CREATE TABLE IF NOT EXISTS ${table} (
+      id INTEGER PRIMARY KEY NOT NULL,
+      name TEXT UNIQUE NOT NULL
+    )`
+  ).then(() => seed(db, table, seedNames).catch((err) => console.error(err)));
 
-export const deleteExpenseCategory = (id) => {
-  const promise = new Promise((resolve, reject) => {
-    categoryExpenseDB.transaction((tx) => {
-      tx.executeSql(
-        `DELETE FROM categories_expense WHERE id = (?)`,
-        [id],
-        (_, res) => resolve(res),
-        (_, err) => reject(err)
-      );
-    });
-  });
-  return promise;
-};
+// Expense categories
+const EXPENSE_CATEGORIES = [
+  "Food",
+  "Health",
+  "Apparel",
+  "Transportation",
+  "Accommodation",
+  "Event",
+  "Element",
+  "Self-development",
+  "Entertainment",
+  "Book",
+  "Other",
+];
 
-// Income
-const initIncomeCategory = () => {
-  const data = ["Salary", "Bonus", "OT", "Interest", "Other"];
-  const result = new Promise((resolve, reject) => {
-    categoryIncomeDB.transaction((tx) => {
-      tx.executeSql(
-        `INSERT OR IGNORE INTO categories_income (name) VALUES (?), (?), (?), (?), (?)`,
-        [...data],
-        () => {
-          resolve();
-        },
-        (_, err) => {
-          reject(err);
-        }
-      );
-    });
-  });
+export const initCategoryExpense = () =>
+  createNamedTable(categoryExpenseDB, "categories_expense", EXPENSE_CATEGORIES);
 
-  return result;
-};
+export const fetchCategoriesExpenseDB = () =>
+  execute(
+    categoryExpenseDB,
+    "SELECT * FROM categories_expense ORDER BY id DESC"
+  ).then(toNamedRows);
 
-export const initCategoryIncomeDB = () => {
-  const promise = new Promise((resolve, reject) => {
-    categoryIncomeDB.transaction((tx) => {
-      tx.executeSql(
-        `CREATE TABLE IF NOT EXISTS categories_income (
-          id INTEGER PRIMARY KEY NOT NULL,
-          name TEXT UNIQUE NOT NULL
-        )`,
-        [],
-        () => {
-          initIncomeCategory()
-            .then(() => {
-              resolve();
-            })
-            .catch((err) => {
-              console.log(err);
-            });
-        },
-        (_, error) => reject(error)
-      );
-    });
-  });
+export const addExpenseCategory = (name) =>
+  execute(
+    categoryExpenseDB,
+    "INSERT INTO categories_expense (name) VALUES (?)",
+    [name]
+  ).then((res) => res.insertId);
 
-  return promise;
-};
+export const updateExpenseCategory = (name, id) =>
+  execute(categoryExpenseDB, "UPDATE categories_expense SET name = (?) WHERE id = (?)", [
+    name,
+    id,
+  ]);
 
-export const fetchCategoryIncomeDB = () => {
-  const promise = new Promise((resolve, reject) => {
-    categoryIncomeDB.transaction((tx) => {
-      tx.executeSql(
-        "SELECT * FROM categories_income ORDER BY id DESC",
-        [],
-        (_, result) => {
-          const accounts = [];
-          for (const db of result.rows._array) {
-            accounts.push({
-              name: db.name,
-              id: db.id,
-            });
-          }
-          // console.log("category-income", accounts);
-          resolve(accounts);
-        },
-        (_, err) => reject(err)
-      );
-    });
-  });
-  return promise;
-};
+export const deleteExpenseCategory = (id) =>
+  execute(categoryExpenseDB, "DELETE FROM categories_expense WHERE id = (?)", [id]);
 
-export const deleteCategoryIncomeDB = (id) => {
-  const promise = new Promise((resolve, reject) => {
-    categoryIncomeDB.transaction((tx) => {
-      tx.executeSql(
-        `DELETE FROM categories_income WHERE id = (?)`,
-        [id],
-        (_, res) => resolve(res),
-        (_, err) => reject(err)
-      );
-    });
-  });
-  return promise;
-};
+// Income categories
+const INCOME_CATEGORIES = ["Salary", "Bonus", "OT", "Interest", "Other"];
 
-export const addIncomeCategory = (name) => {
-  const promise = new Promise((resolve, reject) => {
-    categoryIncomeDB.transaction((tx) => {
-      tx.executeSql(
-        `
-      INSERT INTO categories_income (
-        name
-      ) VALUES (?)`,
-        [name],
-        (_, res) => resolve(res.insertId),
-        (_, err) => reject(err)
-      );
-    });
-  });
+export const initCategoryIncomeDB = () =>
+  createNamedTable(categoryIncomeDB, "categories_income", INCOME_CATEGORIES);
 
-  return promise;
-};
+export const fetchCategoryIncomeDB = () =>
+  execute(
+    categoryIncomeDB,
+    "SELECT * FROM categories_income ORDER BY id DESC"
+  ).then(toNamedRows);
 
-export const updateIncomeCategory = (name, id) => {
-  const promise = new Promise((resolve, reject) => {
-    categoryIncomeDB.transaction((tx) => {
-      tx.executeSql(
-        `UPDATE categories_income SET name = (?) WHERE id = (?)`,
-        [name, id],
-        (_, res) => resolve(res),
-        (_, err) => reject(err)
-      );
-    });
-  });
-  return promise;
-};
+export const deleteCategoryIncomeDB = (id) =>
+  execute(categoryIncomeDB, "DELETE FROM categories_income WHERE id = (?)", [id]);
 
-// Account
-const initAccount = () => {
-  const data = ["Cash", "Accounts", "Card", "Other"];
-  const result = new Promise((resolve, reject) => {
-    accountDB.transaction((tx) => {
-      tx.executeSql(
-        `INSERT OR IGNORE INTO accounts (name) VALUES (?), (?), (?), (?)`,
-        [...data],
-        () => {
-          resolve();
-        },
-        (_, err) => {
-          reject(err);
-        }
-      );
-    });
-  });
+export const addIncomeCategory = (name) =>
+  execute(categoryIncomeDB, "INSERT INTO categories_income (name) VALUES (?)", [
+    name,
+  ]).then((res) => res.insertId);
 
-  return result;
-};
+export const updateIncomeCategory = (name, id) =>
+  execute(categoryIncomeDB, "UPDATE categories_income SET name = (?) WHERE id = (?)", [
+    name,
+    id,
+  ]);
 
-export const initAccountDB = () => {
-  const promise = new Promise((resolve, reject) => {
-    accountDB.transaction((tx) => {
-      tx.executeSql(
-        `CREATE TABLE IF NOT EXISTS accounts (
-          id INTEGER PRIMARY KEY NOT NULL,
-          name TEXT UNIQUE NOT NULL
-        )`,
-        [],
-        () => {
-          initAccount()
-            .then(() => {
-              resolve();
-            })
-            .catch((err) => {
-              console.log(err);
-            });
-        },
-        (_, error) => reject(error)
-      );
-    });
-  });
+// Accounts
+const ACCOUNTS = ["Cash", "Accounts", "Card", "Other"];
 
-  return promise;
-};
+export const initAccountDB = () =>
+  createNamedTable(accountDB, "accounts", ACCOUNTS);
 
-export const fetchAccountDB = () => {
-  const promise = new Promise((resolve, reject) => {
-    accountDB.transaction((tx) => {
-      tx.executeSql(
-        "SELECT * FROM accounts ORDER BY id DESC",
-        [],
-        (_, result) => {
-          const accounts = [];
-          for (const db of result.rows._array) {
-            accounts.push({
-              name: db.name,
-              id: db.id,
-            });
-          }
-          // console.log("category-income", accounts);
-          resolve(accounts);
-        },
-        (_, err) => reject(err)
-      );
-    });
-  });
-  return promise;
-};
+export const fetchAccountDB = () =>
+  execute(accountDB, "SELECT * FROM accounts ORDER BY id DESC").then(toNamedRows);
 
-export const deleteAccountDB = (id) => {
-  const promise = new Promise((resolve, reject) => {
-    accountDB.transaction((tx) => {
-      tx.executeSql(
-        `DELETE FROM accounts WHERE id = (?)`,
-        [id],
-        (_, res) => resolve(res),
-        (_, err) => reject(err)
-      );
-    });
-  });
-  return promise;
-};
+export const deleteAccountDB = (id) =>
+  execute(accountDB, "DELETE FROM accounts WHERE id = (?)", [id]);
 
-export const addAccountDB = (name) => {
-  const promise = new Promise((resolve, reject) => {
-    accountDB.transaction((tx) => {
-      tx.executeSql(
-        `
-      INSERT INTO accounts (
-        name
-      ) VALUES (?)`,
-        [name],
-        (_, res) => resolve(res.insertId),
-        (_, err) => reject(err)
-      );
-    });
-  });
+export const addAccountDB = (name) =>
+  execute(accountDB, "INSERT INTO accounts (name) VALUES (?)", [name]).then(
+    (res) => res.insertId
+  );
 
-  return promise;
-};
+export const updateAccountDB = (name, id) =>
+  execute(accountDB, "UPDATE accounts SET name = (?) WHERE id = (?)", [name, id]);
 
-export const updateAccountDB = (name, id) => {
-  const promise = new Promise((resolve, reject) => {
-    accountDB.transaction((tx) => {
-      tx.executeSql(
-        `UPDATE accounts SET name = (?) WHERE id = (?)`,
-        [name, id],
-        (_, res) => resolve(res),
-        (_, err) => reject(err)
-      );
-    });
-  });
-  return promise;
-};
+// Todo list
+export const initTodo = () =>
+  execute(
+    todoDB,
+    `CREATE TABLE IF NOT EXISTS todoList (
+      id INTEGER PRIMARY KEY NOT NULL,
+      name TEXT UNIQUE NOT NULL,
+      isDone INTEGER DEFAULT 0
+    )`
+  );
 
-// Delete table
-export const deleteTableExpense = () => {
-  const promise = new Promise((resolve, reject) => {
-    accountDB.transaction((tx) => {
-      tx.executeSql(
-        "DROP TABLE IF EXISTS categories_expense",
-        [],
-        () => resolve(),
-        (_, err) => reject(err)
-      );
-    });
-  });
-  return promise;
-};
-export const deleteTableIncome = () => {
-  const promise = new Promise((resolve, reject) => {
-    todoDB.transaction((tx) => {
-      tx.executeSql(
-        "DROP TABLE IF EXISTS todoList",
-        [],
-        () => resolve(),
-        (_, err) => reject(err)
-      );
-    });
-  });
-  return promise;
-};
+export const addTodo = (name) =>
+  execute(todoDB, "INSERT INTO todoList (name) VALUES (?)", [name]).then(
+    (res) => res.insertId
+  );
 
+export const updateTodo = (name, isDone, id) =>
+  execute(todoDB, "UPDATE todoList SET name = (?), isDone = (?) WHERE id = (?)", [
+    name,
+    isDone,
+    id,
+  ]);
 
-// TODO LIST
-export const initTodo = () => {
-  const promise = new Promise((resolve, reject) => {
-    todoDB.transaction((tx) => {
-      tx.executeSql(
-        `CREATE TABLE IF NOT EXISTS todoList (
-          id INTEGER PRIMARY KEY NOT NULL,
-          name TEXT UNIQUE NOT NULL,
-          isDone INTEGER DEFAULT 0
-        )`,
-        [],
-        (_, res) => {
-          resolve(res);
-        },
-        (_, error) => reject(error)
-      );
-    });
-  });
+export const destroyTodo = (id) =>
+  execute(todoDB, "DELETE FROM todoList WHERE id = (?)", [id]);
 
-  return promise;
-};
-
-export const addTodo = (name) => {
-  const promise = new Promise((resolve, reject) => {
-    todoDB.transaction((tx) => {
-      tx.executeSql(`
-        INSERT INTO todoList (name) VALUES (?)`,
-        [name],
-        (_, res) => resolve(res.insertId),
-        (_, err) => reject(err)
-      )
-    })
-  });
-  return promise
-}
-
-export const updateTodo = (name, isDone, id) => {
-  const promise = new Promise((resolve, reject) => {
-    todoDB.transaction((tx) => {
-      tx.executeSql(`UPDATE todoList SET name = (?), isDone = (?) WHERE id = (?)`,
-        [name, isDone, id],
-        (_, res) => resolve(res),
-        (_, err) => reject()
-      )
-    })
-  });
-  return promise;
-}
-
-export const destroyTodo = (id) => {
-  const promise = new Promise((resolve, reject) => {
-    todoDB.transaction((tx) => {
-      tx.executeSql(`DELETE FROM todoList WHERE id = (?)`,
-        [id],
-        (_, res) => resolve(),
-        (_, err) => reject()
-      )
-    })
-  });
-  return promise;
-}
-
-export const getTodoList = () => {
-  const promise = new Promise((resolve, reject) => {
-    todoDB.transaction((tx) => {
-      tx.executeSql('SELECT * FROM todoList ORDER BY id DESC',
-      [],
-      (_, result) => {
-        const data = [];
-        for (const db of result.rows._array) {
-          data.push({
-            name: db.name,
-            id: db.id,
-            isDone: db.isDone
-          });
-        }
-        // console.log("category-income", data);
-        resolve(data);
-      },
-      (_, err) => reject(err)      
-      )
-    })
-  });
-  return promise;
-}
+export const getTodoList = () =>
+  execute(todoDB, "SELECT * FROM todoList ORDER BY id DESC").then((result) =>
+    result.rows._array.map((row) => ({
+      name: row.name,
+      id: row.id,
+      isDone: row.isDone,
+    }))
+  );

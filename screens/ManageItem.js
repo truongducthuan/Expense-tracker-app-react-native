@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useLayoutEffect, useState } from "react";
+import { useLayoutEffect, useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
@@ -17,7 +17,7 @@ import IconButton from "../components/ui/IconButton";
 
 const ManageItem = ({ name }) => {
   const storeCategory = CategoryStore();
-  const { setAccount, accounts, removeAccount } = AccountStore();
+  const { accounts, removeAccount } = AccountStore();
   const { categoriesIncome, removeCategoriesIncome } = CategoryIncomeStore();
   const navigation = useNavigation();
   const [isLoading, setIsLoading] = useState(false);
@@ -39,7 +39,6 @@ const ManageItem = ({ name }) => {
     });
   });
 
-  // console.log({ name });
   const handleDelete = async (id) => {
     try {
       if (name === "expense_category") {
@@ -93,8 +92,6 @@ const ManageItem = ({ name }) => {
       </View>
     );
   };
-
-  // console.log(storeCategory.categories);
 
   let data = [];
   if (name === "expense_category") {

@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { FlatList, StyleSheet, Text, View } from "react-native";
+import { useEffect, useState } from "react";
+import { StyleSheet, View } from "react-native";
 import ExpenseSummary from "../components/expenses/ExpenseSummary";
 import { ExpenseStore } from "../store/context";
 import ListAnnualYear from "../components/expenses/ListAnnualYear";

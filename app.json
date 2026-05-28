@@ -2,6 +2,8 @@
   "expo": {
     "name": "Manage Expense",
     "slug": "expense-stracker-app",
+    "owner": "thuantd",
+    "scheme": "expensetracker",
     "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/pig.png",
@@ -22,7 +24,11 @@
       "buildNumber": "1.0.0",
       "bundleIdentifier": "com.thuanthien.expensestrackerapp",
       "infoPlist": {
-        "UIBackgroundModes": ["location", "fetch", "remote-notification"]
+        "UIBackgroundModes": [
+          "location",
+          "fetch",
+          "remote-notification"
+        ]
       }
     },
     "android": {
@@ -38,7 +44,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": "5bde18a4-20af-4c49-831d-0b324fef5eb1"
+        "projectId": "7db209aa-666c-4107-90c3-7e2ad38fbebd"
       }
     }
   }

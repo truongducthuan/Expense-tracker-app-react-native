@@ -63,8 +63,8 @@ const TotalTypeIncome = () => {
   const hashMap = (data) => {
     let balances = {};
     for(let value of data) {
-      balances[value.account] = (balances[value.account] || 0) + value.amount;
-      balances[value.category] = (balances[value.category] || 0) - value.amount;
+      balances[value.account] = (balances[value.account] || 0) + +value.amount;
+      balances[value.category] = (balances[value.category] || 0) - +value.amount;
     }
     return balances;
   }

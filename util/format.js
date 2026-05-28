@@ -2,6 +2,7 @@ export const formatAmount = (amount) => {
   if(amount) {
     return amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   }
+  return 0;
 };
 
 export const formatInput = (e) => {

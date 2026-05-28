@@ -1,84 +1,57 @@
-import React, {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useState,
-} from "react";
-import {
-  Text,
-  View,
-  StyleSheet,
-  FlatList,
-  ScrollView,
-  Pressable,
-} from "react-native";
+import { useLayoutEffect, useState } from "react";
+import { View, StyleSheet, ScrollView, RefreshControl } from "react-native";
+import { VictoryPie, VictoryTheme, VictoryLabel } from "victory-native";
+import { Line } from "react-native-svg";
 
-import {
-  VictoryPie,
-  VictoryChart,
-  VictoryTheme,
-  VictoryLabel,
-  VictoryScatter,
-} from "victory-native";
-import Svg, { Path } from "react-native-svg";
 import { ExpenseStore } from "../store/context";
+import { AuthStore } from "../store/authContext";
+import useRefresh from "../hooks/useRefresh";
+import useExpenseChartData from "../hooks/useExpenseChartData";
 import NavItem from "../components/ui/NavItem";
-import { colorsArray } from "../constants/color";
 import ListChar from "../components/expenses/ListChar";
-import { GlobalStyles } from "../constants/styles";
 import HeaderTime from "../components/ui/HeaderTime";
 import TotalTypeIncome from "../components/charts/TotalTypeIncome";
 
-import { getFollowMonth, getFollowWeek, getFollowYear } from "../util/date";
-import { getStartOfWeek, getEndOfWeek } from "../util/date";
+// Slices below this percentage hide their label and leader line (still shown in
+// the legend below) to avoid unreadable overlap between thin adjacent slices.
+const LABEL_THRESHOLD = 3;
+
+// Type colors for the Expense/Income toggle: resting vs. bolder (active) shade.
+const EXPENSE_COLOR = { base: "#e53935", active: "#b71c1c" };
+const INCOME_COLOR = { base: "#2e9e0a", active: "#1b5e20" };
+
+// Leader line connecting a slice to its label. VictoryPie's built-in indicator
+// renders a web <line> that crashes on React Native, so we draw it with
+// react-native-svg's <Line> and the x1/y1/x2/y2 props Victory passes in.
+// `index`/`data` let us skip the line for slices under the threshold.
+const LabelLine = ({ x1, y1, x2, y2, index, data, threshold }) => {
+  if (data?.[index] && data[index].y < threshold) return null;
+  return <Line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#9a9a9a" strokeWidth={1} />;
+};
 
 function ExpenseChart({ navigation }) {
-  const { expenses, valueSelectChart, setValueSelectChart } = ExpenseStore();
-  const [data, setData] = useState([]);
-  const [total, setTotal] = useState({
-    income: 0,
-    expense: 0,
-  });
+  const { valueSelectChart, setValueSelectChart, refreshExpenses } =
+    ExpenseStore();
+  const { user } = AuthStore();
   const [title, setTitle] = useState("expense");
-  const [currTimeLabel, setCurrTimeLabel] = useState("m");
-  const [currTimeValue, setCurrTimeValue] = useState(0);
 
-  useEffect(() => {
-    const day = new Date();
-    const date = day.getDate();
-    const month = day.getMonth() + 1;
-    const year = day.getFullYear();
-    setCurrTimeValue((state) => {
-      if (valueSelectChart.toLowerCase() === "monthly") {
-        setCurrTimeLabel("m");
-        return month;
-      } else if (valueSelectChart.toLowerCase() === "yearly") {
-        setCurrTimeLabel("y");
-        return year;
-      } else {
-        setCurrTimeLabel(`from ${getStartOfWeek(day).getDate()}`);
-        // setCurrTimeValue(getEndOfWeek(day).getDate())
-        return getEndOfWeek(day).getDate();
-      }
-    });
-  }, [valueSelectChart]);
+  const { data, total, currTimeLabel, currTimeValue, setCurrTimeValue } =
+    useExpenseChartData(title);
 
-  const calcTotal = (data) => {
-    return data.reduce((a, b) => a + +b.amount, 0);
-  };
+  const { refreshing, handleRefresh } = useRefresh(() =>
+    refreshExpenses(user.email)
+  );
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      headerTitle: () => {
-        return (
-          <HeaderTime
-            valueSelect={valueSelectChart}
-            currTimeLabel={currTimeLabel}
-            currTimeValue={currTimeValue}
-            setCurrTimeValue={setCurrTimeValue}
-          />
-        );
-      },
+      headerTitle: () => (
+        <HeaderTime
+          valueSelect={valueSelectChart}
+          currTimeLabel={currTimeLabel}
+          currTimeValue={currTimeValue}
+          setCurrTimeValue={setCurrTimeValue}
+        />
+      ),
     });
   }, [valueSelectChart, currTimeLabel, currTimeValue, setCurrTimeValue]);
 
@@ -87,139 +60,68 @@ function ExpenseChart({ navigation }) {
     navigation.navigate("AnnualYear");
   }
 
-  const loadData = () => {
-    const today = new Date();
-    if (valueSelectChart.toLowerCase() === "weekly") {
-      const data = getFollowWeek(today, expenses);
-      return data;
-    } else if (valueSelectChart.toLowerCase() === "monthly") {
-      const data = getFollowMonth(currTimeValue, expenses);
-      return data;
-    } else if (valueSelectChart.toLowerCase() === "yearly") {
-      const data = getFollowYear(currTimeValue, expenses);
-      return data;
-    }
-    return expenses;
-  };
-
-  useEffect(() => {
-    const expenseArr = loadData().filter((e) => e.type === "expense");
-    const incomeArr = loadData().filter((e) => e.type === "income");
-    setTotal({
-      expense: calcTotal(expenseArr),
-      income: calcTotal(incomeArr),
-    });
-
-    const objectChart = (data) => {
-      const object = {};
-      for (const item of data) {
-        object[item.category] =
-          (object[item.category] || 0) + Number(item.amount);
-      }
-      return object;
-    };
-    let num = 0;
-
-    if (title === "expense") {
-      const total = calcTotal(expenseArr);
-      const newExpense = objectChart(expenseArr);
-      // console.log(newExpense);
-      const newArr = [];
-      for (let key in newExpense) {
-        const percent = ((newExpense[key] / total) * 100).toFixed(2);
-        newArr.push({
-          x: key,
-          y: +percent,
-          color: colorsArray[num],
-          total: newExpense[key],
-        });
-        num++;
-      }
-      newArr.sort((a, b) => b.y - a.y);
-      setData(newArr);
-    } else {
-      const total = calcTotal(incomeArr);
-      const newExpense = objectChart(incomeArr);
-      const newArr = [];
-      for (let key in newExpense) {
-        const percent = ((newExpense[key] / total) * 100).toFixed(2);
-        newArr.push({
-          x: key,
-          y: Number(percent),
-          color: colorsArray[num],
-          total: newExpense[key],
-        });
-        num++;
-      }
-      newArr.sort((a, b) => b.y - a.y);
-      setData(newArr);
-    }
-  }, [title, valueSelectChart, currTimeValue, currTimeLabel, setCurrTimeValue, expenses]);
-
-  const getColor = () => {
-    return data.map((a) => a.color);
-  };
-
-  const toggleExpense = (e) => {
-    setTitle(e)
-  }
-
   return (
-    <ScrollView>
-      {/* <Svg width={20} height={20} viewBox="0 0 20 20">
-        <Path d="M16.993 6.667H3.227l6.883 6.883 6.883-6.883z" fill="#000" />
-      </Svg> */}
-      {/* <VictoryScatter> */}
+    <ScrollView
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+      }
+    >
       <View style={styles.nav}>
         <NavItem
-          onPress={toggleExpense}
+          onPress={setTitle}
           isNav={title === "expense"}
           style={styles.horizon}
           total={total.expense}
+          color={EXPENSE_COLOR.base}
+          activeColor={EXPENSE_COLOR.active}
+          isLabel={false}
         >
           Expense
         </NavItem>
         <NavItem
-          onPress={toggleExpense}
+          onPress={setTitle}
           isNav={title === "income"}
           style={styles.horizon}
           total={total.income}
+          color={INCOME_COLOR.base}
+          activeColor={INCOME_COLOR.active}
+          isLabel={false}
         >
           Income
         </NavItem>
       </View>
-      {title == 'income' && 
-        <TotalTypeIncome />      
-      }
+
+      {title === "income" && <TotalTypeIncome />}
+
       <View style={styles.chart}>
         <VictoryPie
           key={data}
           data={data}
           x={"x"}
           y={"y"}
-          width={340}
-          height={340}
-          colorScale={getColor()}
-          animate={{
-            duration: 2000,
-          }}
+          width={360}
+          height={360}
+          padding={{ top: 30, bottom: 30, left: 75, right: 75 }}
+          colorScale={data.map((slice) => slice.color)}
+          animate={{ duration: 2000 }}
           theme={VictoryTheme.material}
           sortKey="y"
           sortOrder="descending"
-          labels={({ datum }) => [`${datum.x}`, `${datum.y}%`]}
-          labelComponent={
-            <VictoryLabel
-              style={[{ fill: "#000", fontSize: 8, textAlign: "center" }]}
-              lineHeight={[1, 1]}
-            />
+          labelPosition="centroid"
+          labelRadius={({ radius }) => radius + 22}
+          labelIndicator={<LabelLine data={data} threshold={LABEL_THRESHOLD} />}
+          labelIndicatorInnerOffset={8}
+          labelIndicatorOuterOffset={4}
+          labels={({ datum }) =>
+            datum.y >= LABEL_THRESHOLD ? `${datum.x} ${datum.y}%` : null
           }
+          labelComponent={<VictoryLabel style={{ fill: "#000", fontSize: 9 }} />}
         />
-        {/* </VictoryScatter> */}
       </View>
-      
+
       <View>
-        {data.map((i) => (
-          <ListChar item={i} key={i.x} />
+        {data.map((item) => (
+          <ListChar item={item} key={item.x} />
         ))}
       </View>
     </ScrollView>
@@ -229,13 +131,8 @@ function ExpenseChart({ navigation }) {
 export default ExpenseChart;
 
 const styles = StyleSheet.create({
-  container: {
-    flexDirection: "column",
-    backgroundColor: "#f5fcff",
-  },
   chart: {
     flex: 1,
-    // justifyContent: "center",
     alignItems: "center",
     width: "100%",
     height: 380,
@@ -249,11 +146,5 @@ const styles = StyleSheet.create({
   horizon: {
     paddingHorizontal: 40,
     paddingVertical: 4,
-  },
-  infoText: {
-    color: GlobalStyles.colors.error500,
-    fontSize: 16,
-    textAlign: "center",
-    marginTop: 32,
   },
 });

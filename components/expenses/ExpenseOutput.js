@@ -1,5 +1,5 @@
-import React, { useState, useLayoutEffect, useEffect } from "react";
-import { View, FlatList, StyleSheet, Text, Pressable } from "react-native";
+import { useState, useLayoutEffect, useEffect } from "react";
+import { View, StyleSheet, Text, Pressable } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 
 import ExpenseSummary from "./ExpenseSummary";
@@ -7,16 +7,15 @@ import ExpenseList from "./ExpenseList";
 import HeaderTime from "../ui/HeaderTime";
 import { GlobalStyles } from "../../constants/styles";
 import {
-  getDateMinuteDays,
   getFollowMonth,
   getFollowWeek,
   getFollowYear,
   getEndOfWeek,
-  getStartOfWeek
+  getStartOfWeek,
 } from "../../util/date";
 import { ExpenseStore } from "../../store/context";
 
-const ExpenseOutput = ({ fallBack }) => {
+const ExpenseOutput = ({ fallBack, onRefresh, refreshing }) => {
   const navigation = useNavigation();
   const { expenses } = ExpenseStore();
 
@@ -77,10 +76,14 @@ const ExpenseOutput = ({ fallBack }) => {
     return expenses;
   };
 
-  let content = <Text style={styles.infoText}>{fallBack}</Text>;
-  if (loadData().length > 0) {
-    content = <ExpenseList items={loadData()} />;
-  }
+  const content = (
+    <ExpenseList
+      items={loadData()}
+      fallBack={fallBack}
+      onRefresh={onRefresh}
+      refreshing={refreshing}
+    />
+  );
 
   return (
     <View style={styles.container}>
