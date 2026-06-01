@@ -11,6 +11,7 @@ import ErrorOverlay from "../components/ui/ErrorOverlay";
 import ManagePopup from "../components/popup/ManagePopup";
 import NavExpense from "../components/expenses/NavExpense";
 import { AuthStore } from "../store/authContext";
+import { useLanguage } from "../store/languageContext";
 
 const ManageExpense = ({ route, navigation }) => {
   const {
@@ -24,6 +25,7 @@ const ManageExpense = ({ route, navigation }) => {
     setValueInputAccount,
   } = ExpenseStore();
   const { user, isAuthenticated } = AuthStore();
+  const { t } = useLanguage();
 
   const expenseId = route.params?.expenseId;
   const [isLoading, setIsLoading] = useState(false);
@@ -40,15 +42,18 @@ const ManageExpense = ({ route, navigation }) => {
     desc: "",
   });
 
+  // Sync the form when the user picks a new category/account from the popup.
+  // Skip empty store values so the existing form value (e.g. the original
+  // category in edit mode) isn't wiped out.
   useLayoutEffect(() => {
-    setExpensesInput((state) => {
-      return {
-        ...state,
-        category: valueInputCategory,
-        account: valueInputAccount,
-      };
-    });
-  }, [valueInputAccount, valueInputCategory]);
+    if (!valueInputCategory) return;
+    setExpensesInput((state) => ({ ...state, category: valueInputCategory }));
+  }, [valueInputCategory]);
+
+  useLayoutEffect(() => {
+    if (!valueInputAccount) return;
+    setExpensesInput((state) => ({ ...state, account: valueInputAccount }));
+  }, [valueInputAccount]);
 
   useLayoutEffect(() => {
     if (isEditing && expenseId) {
@@ -69,7 +74,7 @@ const ManageExpense = ({ route, navigation }) => {
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      title: isEditing ? "Edit Expense" : "Add Expense",
+      title: isEditing ? t("edit_expense") : t("add_expense"),
     });
   }, [navigation, isEditing]);
 
@@ -82,7 +87,7 @@ const ManageExpense = ({ route, navigation }) => {
     try {
       await deleteExpenses(expenseId);
     } catch (err) {
-      setError("Could not delete expense - please try again!");
+      setError(t("could_not_delete"));
     }
     setIsLoading(false);
     deleteExpense(expenseId);
@@ -128,7 +133,7 @@ const ManageExpense = ({ route, navigation }) => {
           setValueInputAccount("");
           navigation.goBack();
         } catch (err) {
-          setError("Could Edit expense - please try again!");
+          setError(t("could_not_edit"));
         }
       } else {
         try {
@@ -152,12 +157,12 @@ const ManageExpense = ({ route, navigation }) => {
           setValueInputAccount("");
           navigation.goBack();
         } catch (err) {
-          setError("Could add expense - please try again!");
+          setError(t("could_not_add"));
         }
       }
       setIsLoading(false);
     } else {
-      Alert.alert("Invalid input!", "Please check your input values");
+      Alert.alert(t("invalid_input"), t("check_values"));
       setIsLoading(false);
     }
   };
@@ -192,10 +197,10 @@ const ManageExpense = ({ route, navigation }) => {
             mode={"flat"}
             onPress={cancelhandler}
           >
-            Cancel
+            {t("cancel")}
           </PrimaryButton>
           <PrimaryButton style={styles.button} onPress={handleConfirm}>
-            {isEditing ? "Update" : "Add"}
+            {isEditing ? t("update") : t("add")}
           </PrimaryButton>
         </View>
         {isEditing && (

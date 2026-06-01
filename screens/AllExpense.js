@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import ExpenseOutput from "../components/expenses/ExpenseOutput";
 import { ExpenseStore } from "../store/context";
 import useRefresh from "../hooks/useRefresh";
+import { useLanguage } from "../store/languageContext";
 import Loading from "../components/ui/Loading";
 import ErrorOverlay from "../components/ui/ErrorOverlay";
 import { CategoryStore } from "../store/categoryContext";
@@ -20,6 +21,7 @@ const AllExpense = () => {
   const { setAccount } = AccountStore();
   const { setCategoriesIncome } = CategoryIncomeStore();
   const { user, isAuthenticated } = AuthStore();
+  const { t, lang } = useLanguage();
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -28,7 +30,7 @@ const AllExpense = () => {
     try {
       await refreshExpenses(user.email);
     } catch (err) {
-      setError("Could not fetch expenses!");
+      setError(t("could_not_fetch"));
     }
   };
 
@@ -43,7 +45,7 @@ const AllExpense = () => {
 
   const fetCategory = async () => {
     try {
-      const category = await fetchCategoriesExpenseDB();
+      const category = await fetchCategoriesExpenseDB(lang);
       storeCategory.setCategories(category);
     } catch (err) {
       console.error(err);
@@ -51,7 +53,7 @@ const AllExpense = () => {
   };
   const fetchIncome = async () => {
     try {
-      const income = await fetchCategoryIncomeDB();
+      const income = await fetchCategoryIncomeDB(lang);
       setCategoriesIncome(income);
     } catch (err) {
       console.error(err);
@@ -59,7 +61,7 @@ const AllExpense = () => {
   };
   const fetAccount = async () => {
     try {
-      const account = await fetchAccountDB();
+      const account = await fetchAccountDB(lang);
       setAccount(account);
     } catch (err) {
       console.error(err);
@@ -69,7 +71,7 @@ const AllExpense = () => {
     fetCategory();
     fetAccount();
     fetchIncome();
-  }, []);
+  }, [lang]);
 
   const { refreshing, handleRefresh } = useRefresh(() =>
     Promise.all([getExpenses(), fetCategory(), fetAccount(), fetchIncome()])
@@ -89,7 +91,7 @@ const AllExpense = () => {
 
   return (
     <ExpenseOutput
-      fallBack={"No expense register"}
+      fallBack={t("no_expense")}
       onRefresh={handleRefresh}
       refreshing={refreshing}
     />

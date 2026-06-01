@@ -18,10 +18,12 @@ import TodoItem from "../components/todoList/TodoItem";
 import { checkFormat } from "../util/format";
 import PrimaryButton from "../components/ui/PrimaryButton";
 import useRefresh from "../hooks/useRefresh";
+import { useLanguage } from "../store/languageContext";
 
 const TodoList = ({navigation}) => {
   const { setTodoList, todoList } = TodoListStore();
   const {user} = AuthStore();
+  const { t } = useLanguage();
 
   const [checkList, setCheckList] = useState([]);
   const [clock, setClock] = useState('');
@@ -126,19 +128,19 @@ const TodoList = ({navigation}) => {
         <View style={styles.position}><AntDesign name="link" size={50} color="brown" /></View>
         <View style={[styles.title, styles.flexRow]}>
           <View>
-            <Text>Today</Text>
+            <Text>{t("today")}</Text>
             <Text>{clock}</Text>
           </View>
           <View style={[styles.flexRow]}>
             <Text>{checkList.length}/{todoList.length}</Text>
-            <Text style={{color: '#12590d96'}}>completed</Text>
+            <Text style={{color: '#12590d96'}}>{t("completed")}</Text>
           </View>
         </View>
         <FlatList data={todoList} keyExtractor={(item) => item.id} renderItem={({item, index}) => <TodoItem item={item} index={index} onPress={() => onCheck(item)} style={styleColor} />} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />} />
 
         <View>
-          <Text style={{fontSize: 12, fontStyle: 'italic', color: '#2dab0a'}}>Please, submit your todo list at the end of the day!</Text>
-          <PrimaryButton onPress={onSubmit} style={styles.btnSubmit}>Submit</PrimaryButton>
+          <Text style={{fontSize: 12, fontStyle: 'italic', color: '#2dab0a'}}>{t("submit_hint")}</Text>
+          <PrimaryButton onPress={onSubmit} style={styles.btnSubmit}>{t("submit")}</PrimaryButton>
         </View>
       </View>
     </View>

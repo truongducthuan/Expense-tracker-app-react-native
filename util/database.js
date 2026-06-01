@@ -21,54 +21,88 @@ const execute = (db, sql, params = []) =>
 const toNamedRows = (result) =>
   result.rows._array.map((row) => ({ name: row.name, id: row.id }));
 
-// Inserts default rows (idempotent thanks to INSERT OR IGNORE on the UNIQUE name).
-const seed = (db, table, names) => {
-  const placeholders = names.map(() => "(?)").join(", ");
+// Adds the `lang` column to legacy tables that pre-date i18n. Errors are
+// swallowed because re-running on a table that already has the column throws.
+const ensureLangColumn = (db, table) =>
+  execute(
+    db,
+    `ALTER TABLE ${table} ADD COLUMN lang TEXT NOT NULL DEFAULT 'en'`
+  ).catch(() => {});
+
+// Inserts default rows tagged with the given language. Idempotent thanks to
+// INSERT OR IGNORE on the UNIQUE(name) constraint.
+const seed = (db, table, names, lang) => {
+  const placeholders = names.map(() => "(?, ?)").join(", ");
+  const params = names.flatMap((n) => [n, lang]);
   return execute(
     db,
-    `INSERT OR IGNORE INTO ${table} (name) VALUES ${placeholders}`,
-    names
+    `INSERT OR IGNORE INTO ${table} (name, lang) VALUES ${placeholders}`,
+    params
   );
 };
 
-const createNamedTable = (db, table, seedNames) =>
+const createNamedTable = (db, table, seedsByLang) =>
   execute(
     db,
     `CREATE TABLE IF NOT EXISTS ${table} (
       id INTEGER PRIMARY KEY NOT NULL,
       name TEXT UNIQUE NOT NULL
     )`
-  ).then(() => seed(db, table, seedNames).catch((err) => console.error(err)));
+  )
+    .then(() => ensureLangColumn(db, table))
+    .then(() =>
+      Promise.all(
+        Object.entries(seedsByLang).map(([lang, names]) =>
+          seed(db, table, names, lang).catch((err) => console.error(err))
+        )
+      )
+    );
 
 // Expense categories
-const EXPENSE_CATEGORIES = [
-  "Food",
-  "Health",
-  "Apparel",
-  "Transportation",
-  "Accommodation",
-  "Event",
-  "Element",
-  "Self-development",
-  "Entertainment",
-  "Book",
-  "Other",
-];
+const EXPENSE_CATEGORIES = {
+  en: [
+    "Food",
+    "Health",
+    "Apparel",
+    "Transportation",
+    "Accommodation",
+    "Event",
+    "Tools",
+    "Self-development",
+    "Entertainment",
+    "Book",
+    "Other",
+  ],
+  vi: [
+    "Ăn uống",
+    "Sức khoẻ",
+    "Trang phục",
+    "Di chuyển",
+    "Nhà ở",
+    "Sự kiện",
+    "Thiết bị",
+    "Phát triển bản thân",
+    "Giải trí",
+    "Sách",
+    "Khác",
+  ],
+};
 
 export const initCategoryExpense = () =>
   createNamedTable(categoryExpenseDB, "categories_expense", EXPENSE_CATEGORIES);
 
-export const fetchCategoriesExpenseDB = () =>
+export const fetchCategoriesExpenseDB = (lang = "en") =>
   execute(
     categoryExpenseDB,
-    "SELECT * FROM categories_expense ORDER BY id DESC"
+    "SELECT * FROM categories_expense WHERE lang = ? ORDER BY id DESC",
+    [lang]
   ).then(toNamedRows);
 
-export const addExpenseCategory = (name) =>
+export const addExpenseCategory = (name, lang = "en") =>
   execute(
     categoryExpenseDB,
-    "INSERT INTO categories_expense (name) VALUES (?)",
-    [name]
+    "INSERT INTO categories_expense (name, lang) VALUES (?, ?)",
+    [name, lang]
   ).then((res) => res.insertId);
 
 export const updateExpenseCategory = (name, id) =>
@@ -81,24 +115,30 @@ export const deleteExpenseCategory = (id) =>
   execute(categoryExpenseDB, "DELETE FROM categories_expense WHERE id = (?)", [id]);
 
 // Income categories
-const INCOME_CATEGORIES = ["Salary", "Bonus", "OT", "Interest", "Other"];
+const INCOME_CATEGORIES = {
+  en: ["Salary", "Bonus", "OT", "Interest", "Other"],
+  vi: ["Lương", "Thưởng", "Tăng ca", "Lãi suất", "Khác"],
+};
 
 export const initCategoryIncomeDB = () =>
   createNamedTable(categoryIncomeDB, "categories_income", INCOME_CATEGORIES);
 
-export const fetchCategoryIncomeDB = () =>
+export const fetchCategoryIncomeDB = (lang = "en") =>
   execute(
     categoryIncomeDB,
-    "SELECT * FROM categories_income ORDER BY id DESC"
+    "SELECT * FROM categories_income WHERE lang = ? ORDER BY id DESC",
+    [lang]
   ).then(toNamedRows);
 
 export const deleteCategoryIncomeDB = (id) =>
   execute(categoryIncomeDB, "DELETE FROM categories_income WHERE id = (?)", [id]);
 
-export const addIncomeCategory = (name) =>
-  execute(categoryIncomeDB, "INSERT INTO categories_income (name) VALUES (?)", [
-    name,
-  ]).then((res) => res.insertId);
+export const addIncomeCategory = (name, lang = "en") =>
+  execute(
+    categoryIncomeDB,
+    "INSERT INTO categories_income (name, lang) VALUES (?, ?)",
+    [name, lang]
+  ).then((res) => res.insertId);
 
 export const updateIncomeCategory = (name, id) =>
   execute(categoryIncomeDB, "UPDATE categories_income SET name = (?) WHERE id = (?)", [
@@ -107,21 +147,27 @@ export const updateIncomeCategory = (name, id) =>
   ]);
 
 // Accounts
-const ACCOUNTS = ["Cash", "Accounts", "Card", "Other"];
+const ACCOUNTS = {
+  en: ["Cash", "Accounts", "Card", "Other"],
+  vi: ["Tiền mặt", "Tài khoản", "Thẻ", "Khác"],
+};
 
 export const initAccountDB = () =>
   createNamedTable(accountDB, "accounts", ACCOUNTS);
 
-export const fetchAccountDB = () =>
-  execute(accountDB, "SELECT * FROM accounts ORDER BY id DESC").then(toNamedRows);
+export const fetchAccountDB = (lang = "en") =>
+  execute(accountDB, "SELECT * FROM accounts WHERE lang = ? ORDER BY id DESC", [
+    lang,
+  ]).then(toNamedRows);
 
 export const deleteAccountDB = (id) =>
   execute(accountDB, "DELETE FROM accounts WHERE id = (?)", [id]);
 
-export const addAccountDB = (name) =>
-  execute(accountDB, "INSERT INTO accounts (name) VALUES (?)", [name]).then(
-    (res) => res.insertId
-  );
+export const addAccountDB = (name, lang = "en") =>
+  execute(accountDB, "INSERT INTO accounts (name, lang) VALUES (?, ?)", [
+    name,
+    lang,
+  ]).then((res) => res.insertId);
 
 export const updateAccountDB = (name, id) =>
   execute(accountDB, "UPDATE accounts SET name = (?) WHERE id = (?)", [name, id]);

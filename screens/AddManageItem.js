@@ -15,11 +15,18 @@ import {
   updateIncomeCategory,
 } from "../util/database";
 import { CategoryIncomeStore } from "../store/incomeCategory";
+import { useLanguage } from "../store/languageContext";
+
+// SQLite raises "UNIQUE constraint failed" when inserting/renaming to a name
+// that already exists in the table.
+const isDuplicateError = (err) =>
+  typeof err?.message === "string" && err.message.includes("UNIQUE");
 
 const AddManageItem = ({ route, navigation }) => {
   const storeContext = CategoryStore();
   const { addAccount, editAccount } = AccountStore();
   const { addCategoriesIncome, editCategoriesIncome } = CategoryIncomeStore();
+  const { t, lang } = useLanguage();
 
   const [valueInput, setValueInput] = useState("");
   const [error, setError] = useState("");
@@ -29,76 +36,55 @@ const AddManageItem = ({ route, navigation }) => {
 
   useLayoutEffect(() => {
     const nameHeader = () => {
-      if (name === "ManageCategoryIncome") {
-        return "Add Income Category";
-      } else if (name === "ChangeExpense") {
-        return "Change Expense Category";
-      } else if (name === "ManageCategoryExpense") {
-        return "Add Expense Category";
-      } else if (name === "ChangeIncome") {
-        return "Change Income Category";
-      } else if (name === "ManageAccount") {
-        return "Add Account";
-      } else {
-        return "Change Account";
-      }
+      if (name === "ManageCategoryIncome") return t("add_income_category");
+      if (name === "ChangeExpense") return t("change_expense_category");
+      if (name === "ManageCategoryExpense") return t("add_expense_category");
+      if (name === "ChangeIncome") return t("change_income_category");
+      if (name === "ManageAccount") return t("add_account");
+      return t("change_account");
     };
     navigation.setOptions({
       title: nameHeader(),
     });
-  }, [name]);
+  }, [name, t]);
 
   const handleChange = async () => {
-    if (valueInput.trim().length > 0 && name) {
-      setIsLoading(true);
+    if (!valueInput.trim().length || !name) {
+      Alert.alert(t("invalid_input"), t("please_check_input"));
+      return;
+    }
+
+    setIsLoading(true);
+    try {
       if (name === "ManageCategoryIncome") {
-        try {
-          const id = await addIncomeCategory(valueInput);
-          addCategoriesIncome({ name: valueInput, id });
-          navigation.goBack();
-        } catch (err) {
-          setError("Could add account - Please try again");
-          console.error(err);
-        }
+        const newId = await addIncomeCategory(valueInput, lang);
+        addCategoriesIncome({ name: valueInput, id: newId });
       } else if (name === "ManageCategoryExpense") {
-        try {
-          const id = await addExpenseCategory(valueInput);
-          storeContext.addCategory({ name: valueInput, id });
-          navigation.goBack();
-        } catch (err) {
-          setError("Could add category - Please try again");
-          console.error(err);
-        }
+        const newId = await addExpenseCategory(valueInput, lang);
+        storeContext.addCategory({ name: valueInput, id: newId });
       } else if (name === "ChangeExpense") {
-        try {
-          await updateExpenseCategory(valueInput, id);
-          storeContext.editCategory({ name: valueInput }, id);
-          navigation.goBack();
-        } catch (err) {
-          setError("Could update category - Please try again");
-          console.error(err);
-        }
+        await updateExpenseCategory(valueInput, id);
+        storeContext.editCategory({ name: valueInput }, id);
       } else if (name === "ChangeIncome") {
-        try {
-          await updateIncomeCategory(valueInput, id);
-          editCategoriesIncome({ name: valueInput }, id);
-          navigation.goBack();
-        } catch (err) {
-          setError("Could update category - Please try again");
-          console.error(err);
-        }
+        await updateIncomeCategory(valueInput, id);
+        editCategoriesIncome({ name: valueInput }, id);
       } else if (name === "ChangeAccount") {
         await updateAccountDB(valueInput, id);
         editAccount({ name: valueInput }, id);
-        navigation.goBack();
       } else if (name === "ManageAccount") {
-        const id = await addAccountDB(valueInput);
-        addAccount({ name: valueInput, id });
-        navigation.goBack();
+        const newId = await addAccountDB(valueInput, lang);
+        addAccount({ name: valueInput, id: newId });
       }
+      navigation.goBack();
+    } catch (err) {
+      if (isDuplicateError(err)) {
+        Alert.alert(t("duplicate_name"), t("name_already_exists"));
+      } else {
+        setError(t("could_not_save"));
+        console.error(err);
+      }
+    } finally {
       setIsLoading(false);
-    } else {
-      Alert.alert("Input invalid", "Please check your input value!");
     }
   };
 
@@ -122,7 +108,7 @@ const AddManageItem = ({ route, navigation }) => {
         }}
       />
       <PrimaryButton style={styles.button} onPress={handleChange}>
-        Save
+        {t("save")}
       </PrimaryButton>
     </View>
   );

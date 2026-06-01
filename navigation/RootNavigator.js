@@ -6,6 +6,7 @@ import * as SplashScreen from "expo-splash-screen";
 
 import { GlobalStyles } from "../constants/styles";
 import { AuthStore } from "../store/authContext";
+import { useLanguage } from "../store/languageContext";
 
 import DrawerNavigator from "./DrawerNavigator";
 import ManageItemOverview from "./ManageItemOverview";
@@ -57,49 +58,52 @@ function Root() {
   return <Navigation />;
 }
 
-const RootNavigator = () => (
-  <Stack.Navigator
-    screenOptions={{
-      headerStyle: { backgroundColor: GlobalStyles.colors.primary500 },
-      headerTintColor: "#fff",
-    }}
-  >
-    <Stack.Screen
-      name="Navigation"
-      component={Root}
-      options={{ headerShown: false }}
-    />
-    <Stack.Screen
-      name="DrawNavigation"
-      component={DrawerNavigator}
-      options={{ headerShown: false }}
-    />
-    <Stack.Screen
-      name="ManageExpense"
-      component={ManageExpense}
-      options={{ presentation: "modal" }}
-    />
-    <Stack.Screen
-      name="AddManageItem"
-      component={AddManageItem}
-      options={{ presentation: "modal" }}
-    />
-    <Stack.Screen
-      name="AnnualYear"
-      component={AnualYear}
-      options={{ title: "Annual statistical" }}
-    />
-    <Stack.Screen
-      name="ManageItem"
-      component={ManageItemOverview}
-      options={{ headerShown: false }}
-    />
-    <Stack.Screen
-      name="ManageTodo"
-      component={ManagerTodo}
-      options={{ title: "Manage Todo" }}
-    />
-  </Stack.Navigator>
-);
+const RootNavigator = () => {
+  const { t } = useLanguage();
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: GlobalStyles.colors.primary500 },
+        headerTintColor: "#fff",
+      }}
+    >
+      <Stack.Screen
+        name="Navigation"
+        component={Root}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="DrawNavigation"
+        component={DrawerNavigator}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="ManageExpense"
+        component={ManageExpense}
+        options={{ presentation: "modal" }}
+      />
+      <Stack.Screen
+        name="AddManageItem"
+        component={AddManageItem}
+        options={{ presentation: "modal" }}
+      />
+      <Stack.Screen
+        name="AnnualYear"
+        component={AnualYear}
+        options={{ title: t("annual_statistical") }}
+      />
+      <Stack.Screen
+        name="ManageItem"
+        component={ManageItemOverview}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="ManageTodo"
+        component={ManagerTodo}
+        options={{ title: t("manage_todo") }}
+      />
+    </Stack.Navigator>
+  );
+};
 
 export default RootNavigator;

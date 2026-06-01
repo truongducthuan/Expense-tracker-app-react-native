@@ -1,11 +1,9 @@
 import { StyleSheet, Text, View } from "react-native";
 import { Pressable } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { Ionicons } from "@expo/vector-icons";
 
-import { GlobalStyles } from "../../constants/styles";
-import { getFormatDate } from "../../util/date";
-import { formatAmount } from "../../util/format";
+import { GlobalStyles, CATEGORY_TYPE } from "../../constants";
+import { getFormatDate, formatAmount } from "../../util";
 
 const ExpenseItem = ({ desc, amount, date, id, account, category, type }) => {
   const navigation = useNavigation();
@@ -16,9 +14,9 @@ const ExpenseItem = ({ desc, amount, date, id, account, category, type }) => {
   };
 
   const typeColor = () => {
-    if (type === "expense") {
+    if (type === CATEGORY_TYPE.EXPENSE) {
       return { color: GlobalStyles.colors.error500, ...styles.amount };
-    } else if (type === "income") {
+    } else if (type === CATEGORY_TYPE.IMCOME) {
       return { color: GlobalStyles.colors.income, ...styles.amount };
     } else {
       return { color: GlobalStyles.colors.accent500, ...styles.amount };
@@ -26,12 +24,12 @@ const ExpenseItem = ({ desc, amount, date, id, account, category, type }) => {
   };
 
   const colorStyle = () => {
-    if (type == "expense") {
-      return { color: GlobalStyles.colors.error500, fontStyle: 'italic'};
-    } else if (type == "income") {
-      return { color: GlobalStyles.colors.income, fontStyle: 'italic'};
+    if (type == CATEGORY_TYPE.EXPENSE) {
+      return { color: GlobalStyles.colors.error500, fontStyle: 'italic', fontSize: 12 };
+    } else if (type == CATEGORY_TYPE.IMCOME) {
+      return { color: GlobalStyles.colors.income, fontStyle: 'italic', fontSize: 12 };
     } else {
-      return { color: GlobalStyles.colors.accent500, fontStyle: 'italic'};
+      return { color: GlobalStyles.colors.accent500, fontStyle: 'italic', fontSize: 12 };
     }
   };
 
@@ -79,20 +77,20 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
   },
   category: {
-    fontSize: 16,
+    fontSize: 14,
     marginBottom: 4,
     fontWeight: "bold",
     color: "#fff",
   },
   account: {
-    fontSize: 13,
+    fontSize: 12,
     marginBottom: 4,
     fontWeight: "400",
     color: '#cad82f',
   },
   priceContainer: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 2,
     backgroundColor: "#fff",
     justifyContent: "center",
     alignItems: "center",
@@ -102,12 +100,13 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     minWidth: 50,
     textAlign: "center",
+    fontSize: 12
   },
   pressed: {
     opacity: 0.75,
   },
   desc: {
     color: GlobalStyles.colors.primary200,
-    fontSize: 11,
+    fontSize: 10,
   },
 });

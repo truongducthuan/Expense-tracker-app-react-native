@@ -50,7 +50,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   sum: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "bold",
     textAlign: "center",
   },

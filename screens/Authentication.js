@@ -8,12 +8,14 @@ import AuthForm from "../components/auth/AuthForm";
 import { loginApi, signUpApi, sendPasswordResetApi } from "../api/auth";
 import { AuthStore } from "../store/authContext";
 import useGoogleAuth from "../hooks/useGoogleAuth";
+import { useLanguage } from "../store/languageContext";
 
 const EMPTY_FORM = { email: "", password: "" };
 
 const Authentication = () => {
   const navigation = useNavigation();
   const { login } = AuthStore();
+  const { t } = useLanguage();
 
   const [isLogin, setIsLogin] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -28,15 +30,18 @@ const Authentication = () => {
       login(user);
       goToApp();
     },
-    onError: () => setErrorMessage("Google sign-in failed - please try again!"),
+    onError: () => setErrorMessage(t("google_signin_failed")),
   });
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      title: isLogin ? "Login" : "Sign up",
+      title: isLogin ? t("login") : t("sign_up"),
       headerTitleAlign: "center",
+      headerStyle: { backgroundColor: "#2d0689" },
+      headerTintColor: "#fff",
+      headerShadowVisible: false,
     });
-  }, [navigation, isLogin]);
+  }, [navigation, isLogin, t]);
 
   const handleChangeField = (name, value) =>
     setValues((prev) => ({ ...prev, [name]: value }));
@@ -45,22 +50,17 @@ const Authentication = () => {
 
   const handleForgotPassword = async () => {
     if (!values.email.includes("@")) {
-      Alert.alert(
-        "Email required",
-        "Please enter your email above to reset your password."
-      );
+      Alert.alert(t("email_required"), t("enter_email_to_reset"));
       return;
     }
     try {
       await sendPasswordResetApi(values.email);
       Alert.alert(
-        "Check your email",
-        `A password reset link was sent to ${values.email}.`
+        t("check_your_email"),
+        `${t("reset_link_sent")} ${values.email}.`
       );
     } catch (err) {
-      setErrorMessage(
-        "Could not send reset email - please check the address and try again!"
-      );
+      setErrorMessage(t("could_not_send_reset"));
     }
   };
 
@@ -68,7 +68,7 @@ const Authentication = () => {
     const isValid =
       values.email.includes("@") && values.password.length >= 6;
     if (!isValid) {
-      Alert.alert("Invalid input!", "Please check your input values");
+      Alert.alert(t("invalid_input"), t("check_values"));
       return;
     }
 
@@ -91,9 +91,7 @@ const Authentication = () => {
       }
     } catch (err) {
       setErrorMessage(
-        isLogin
-          ? "Could not login with this account - please try again!"
-          : "Could not create user - please try again!"
+        isLogin ? t("could_not_login") : t("could_not_create_user")
       );
     } finally {
       setIsSubmitting(false);
@@ -110,7 +108,7 @@ const Authentication = () => {
   }
 
   if (isSubmitting) {
-    return <Loading message={isLogin ? "Logging..." : "Creating user..."} />;
+    return <Loading message={isLogin ? t("logging_in") : t("creating_user")} />;
   }
 
   return (

@@ -5,6 +5,7 @@ import { Calendar } from "react-native-calendars";
 import PrimaryInput from "./ui/PrimaryInput";
 import { GlobalStyles } from "../constants/styles";
 import { formatInput, formatAmount } from "../util/format";
+import { useLanguage } from "../store/languageContext";
 
 const ExpenseForm = ({
   setExpenses,
@@ -13,7 +14,8 @@ const ExpenseForm = ({
   setNameHeader,
   titleName,
 }) => {
-  
+  const { t } = useLanguage();
+
   const [selected, setSelected] = useState(expenses.date);
   const [isShowDate, setIsShowDate] = useState(false);
 
@@ -57,10 +59,10 @@ const ExpenseForm = ({
   return (
     <>
       <View style={styles.form}>
-        <Text style={styles.title}>Your {titleName}</Text>
+        <Text style={styles.title}>{t("your")} {t(titleName)}</Text>
         <View style={styles.inputRow}>
           <PrimaryInput
-            label={"Amount"}
+            label={t("amount")}
             textInputConfig={{
               keyboardType: "decimal-pad",
               onChangeText: handleAmount,
@@ -71,7 +73,7 @@ const ExpenseForm = ({
           />
           <Pressable onPress={handleDate}>
             <PrimaryInput
-              label={"Date"}
+              label={t("date")}
               style={[styles.rowInput, styles.minWidth]}
               value={selected}
               editable={false}
@@ -99,7 +101,7 @@ const ExpenseForm = ({
         }
         <Pressable onPress={handleSelectCategory.bind(null, "category")}>
           <PrimaryInput
-            label={titleName === "transfer" ? "From" : "Category"}
+            label={titleName === "transfer" ? t("from") : t("category")}
             style={styles.rowInput}
             value={expenses.category}
             editable={false}
@@ -107,14 +109,14 @@ const ExpenseForm = ({
         </Pressable>
         <Pressable onPress={handleSelectAccount.bind(null, "account")}>
           <PrimaryInput
-            label={titleName === "transfer" ? "To" : "Account"}
+            label={titleName === "transfer" ? t("to") : t("account")}
             style={styles.rowInput}
             value={expenses.account}
             editable={false}
           />
         </Pressable>
         <PrimaryInput
-          label={"Description"}
+          label={t("description")}
           textInputConfig={{
             onChangeText: handleDesc,
             multiline: true,

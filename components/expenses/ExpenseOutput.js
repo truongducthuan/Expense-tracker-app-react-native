@@ -6,6 +6,7 @@ import ExpenseSummary from "./ExpenseSummary";
 import ExpenseList from "./ExpenseList";
 import HeaderTime from "../ui/HeaderTime";
 import { GlobalStyles } from "../../constants/styles";
+import { useLanguage } from "../../store/languageContext";
 import {
   getFollowMonth,
   getFollowWeek,
@@ -18,6 +19,7 @@ import { ExpenseStore } from "../../store/context";
 const ExpenseOutput = ({ fallBack, onRefresh, refreshing }) => {
   const navigation = useNavigation();
   const { expenses } = ExpenseStore();
+  const { t } = useLanguage();
 
   const [typeFollow, setTypeFollow] = useState("weekly");
   const [currTimeLabel, setCurrTimeLabel] = useState("m");
@@ -103,7 +105,7 @@ const ExpenseOutput = ({ fallBack, onRefresh, refreshing }) => {
               },
             ]}
           >
-            Weekly
+            {t("weekly")}
           </Text>
         </Pressable>
         <Pressable
@@ -121,7 +123,7 @@ const ExpenseOutput = ({ fallBack, onRefresh, refreshing }) => {
               },
             ]}
           >
-            Monthly
+            {t("monthly")}
           </Text>
         </Pressable>
         <Pressable
@@ -139,7 +141,7 @@ const ExpenseOutput = ({ fallBack, onRefresh, refreshing }) => {
               },
             ]}
           >
-            Yearly
+            {t("yearly")}
           </Text>
         </Pressable>
         <Pressable
@@ -159,7 +161,7 @@ const ExpenseOutput = ({ fallBack, onRefresh, refreshing }) => {
               },
             ]}
           >
-            Total
+            {t("total")}
           </Text>
         </Pressable>
       </View>
@@ -176,8 +178,8 @@ const styles = StyleSheet.create({
     backgroundColor: GlobalStyles.colors.primary700,
     flex: 1,
     paddingHorizontal: 24,
-    paddingTop: 12,
-    paddingBottom: 40,
+    paddingTop: 6,
+    // paddingBottom: 40,
   },
   infoText: {
     color: "#fff",

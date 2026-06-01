@@ -113,9 +113,11 @@ function ExpenseChart({ navigation }) {
           labelIndicatorInnerOffset={8}
           labelIndicatorOuterOffset={4}
           labels={({ datum }) =>
-            datum.y >= LABEL_THRESHOLD ? `${datum.x} ${datum.y}%` : null
+            datum.y >= LABEL_THRESHOLD
+              ? `${datum.x} ${Math.round(datum.y)}%`
+              : null
           }
-          labelComponent={<VictoryLabel style={{ fill: "#000", fontSize: 9 }} />}
+          labelComponent={<VictoryLabel style={{ fill: "#000", fontSize: 8 }} />}
         />
       </View>
 

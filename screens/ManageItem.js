@@ -1,4 +1,4 @@
-import { useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
@@ -11,16 +11,40 @@ import {
   deleteAccountDB,
   deleteCategoryIncomeDB,
   deleteExpenseCategory,
+  fetchAccountDB,
+  fetchCategoriesExpenseDB,
+  fetchCategoryIncomeDB,
 } from "../util/database";
 import { CategoryIncomeStore } from "../store/incomeCategory";
 import IconButton from "../components/ui/IconButton";
+import { useLanguage } from "../store/languageContext";
 
 const ManageItem = ({ name }) => {
   const storeCategory = CategoryStore();
-  const { accounts, removeAccount } = AccountStore();
-  const { categoriesIncome, removeCategoriesIncome } = CategoryIncomeStore();
+  const { accounts, removeAccount, setAccount } = AccountStore();
+  const { categoriesIncome, removeCategoriesIncome, setCategoriesIncome } =
+    CategoryIncomeStore();
   const navigation = useNavigation();
+  const { lang } = useLanguage();
   const [isLoading, setIsLoading] = useState(false);
+
+  // Keep the on-screen list in sync with the current language by re-fetching
+  // from the DB whenever the user switches language (or opens this screen).
+  useEffect(() => {
+    (async () => {
+      try {
+        if (name === "expense_category") {
+          storeCategory.setCategories(await fetchCategoriesExpenseDB(lang));
+        } else if (name === "income_category") {
+          setCategoriesIncome(await fetchCategoryIncomeDB(lang));
+        } else {
+          setAccount(await fetchAccountDB(lang));
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    })();
+  }, [lang, name]);
 
   useLayoutEffect(() => {
     navigation.setOptions({

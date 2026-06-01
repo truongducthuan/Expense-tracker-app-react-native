@@ -9,10 +9,12 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { GlobalStyles } from "../constants/styles";
 import { AuthStore } from "../store/authContext";
+import { useLanguage } from "../store/languageContext";
 
 const CustomDrawerContent = (props) => {
   const { user, logout } = AuthStore();
   const navigation = useNavigation();
+  const { t } = useLanguage();
 
   const handleLogout = () => {
     logout();
@@ -44,7 +46,7 @@ const CustomDrawerContent = (props) => {
       />
       <DrawerItemList {...props} />
       <DrawerItem
-        label={"Logout"}
+        label={t("logout")}
         onPress={handleLogout}
         labelStyle={{ color: GlobalStyles.colors.error500 }}
         icon={({ focused }) => (
