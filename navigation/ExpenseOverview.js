@@ -11,6 +11,8 @@ import { useLanguage } from "../store/languageContext";
 
 const Tab = createBottomTabNavigator();
 
+// This is main screen include all list transactions and charts
+
 const ExpenseOverview = () => {
   const { t } = useLanguage();
   return (

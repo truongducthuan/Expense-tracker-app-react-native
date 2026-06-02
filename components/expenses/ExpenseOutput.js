@@ -1,5 +1,11 @@
 import { useState, useLayoutEffect, useEffect } from "react";
-import { View, StyleSheet, Text, Pressable } from "react-native";
+import {
+  View,
+  StyleSheet,
+  Text,
+  Pressable,
+  ActivityIndicator,
+} from "react-native";
 import { useNavigation } from "@react-navigation/native";
 
 import ExpenseSummary from "./ExpenseSummary";
@@ -24,9 +30,16 @@ const ExpenseOutput = ({ fallBack, onRefresh, refreshing }) => {
   const [typeFollow, setTypeFollow] = useState("weekly");
   const [currTimeLabel, setCurrTimeLabel] = useState("m");
   const [currTimeValue, setCurrTimeValue] = useState(0);
+  const [loading, setLoading] = useState(false);
   const handleFollow = (type) => {
     setTypeFollow(type);
   };
+
+  useEffect(() => {
+    setLoading(true);
+    const timer = setTimeout(() => setLoading(false), 450);
+    return () => clearTimeout(timer);
+  }, [typeFollow, currTimeValue]);
 
   useEffect(() => {
     const day = new Date();
@@ -166,7 +179,16 @@ const ExpenseOutput = ({ fallBack, onRefresh, refreshing }) => {
         </Pressable>
       </View>
       <ExpenseSummary expenses={loadData()} />
-      {content}
+      {loading ? (
+        <View style={styles.loading}>
+          <ActivityIndicator
+            size="large"
+            color={GlobalStyles.colors.primary100}
+          />
+        </View>
+      ) : (
+        content
+      )}
     </View>
   );
 };
@@ -208,5 +230,11 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.6,
+  },
+  loading: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 80,
   },
 });

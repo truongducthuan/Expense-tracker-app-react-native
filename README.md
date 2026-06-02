@@ -12,6 +12,10 @@
 - Đồng bộ dữ liệu lên Firebase Realtime Database
 - Lưu danh mục và tài khoản cục bộ bằng SQLite
 
+## Install app
+
+- Android: (https://expo.dev/accounts/thuantd/projects/expense-stracker-app/builds/9c717c0f-9af3-4f67-8d60-0a0575da182e)
+
 ## Tech Stack
 
 | Thành phần       | Công nghệ                                       |
@@ -187,6 +191,12 @@ eas build --profile preview --platform ios
 
 ```bash
 eas build --profile production --platform ios
+```
+
+### Build trực tiếp với android
+
+```bash
+eas build -p android --profile preview --non-interactive --no-wait 2>&1
 ```
 
 EAS sẽ tự động xử lý certificates và provisioning profiles.

@@ -11,6 +11,8 @@ import Settings from "../screens/Settings";
 
 const Drawer = createDrawerNavigator();
 
+// This is Nab (left nab)
+
 const DrawerNavigator = () => {
   const { t } = useLanguage();
 

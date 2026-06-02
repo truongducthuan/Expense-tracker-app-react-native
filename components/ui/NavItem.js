@@ -29,6 +29,7 @@ const NavItem = ({ children, onPress, isNav, style, total, color, activeColor, i
         style={[
           styles.title,
           style,
+          { opacity: isNav ? 1 : 0.6 },
           { backgroundColor, color: textColor },
           isNav && typed && styles.active,
         ]}

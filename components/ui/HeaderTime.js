@@ -3,7 +3,6 @@ import { Pressable, StyleSheet, View, Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import { GlobalStyles } from "../../constants/styles";
-import { getEndOfWeek } from "../../util/date";
 
 const HeaderTime = ({
   currTimeValue,
@@ -11,76 +10,62 @@ const HeaderTime = ({
   currTimeLabel,
   setCurrTimeValue,
 }) => {
-  const checkInValid = () => {
+  const period = valueSelect.toLowerCase();
+
+  const isPrevDisabled =
+    period === "weekly" ||
+    ((period === "monthly" || period === "yearly") && currTimeValue <= 1);
+
+  const isNextDisabled = (() => {
     const date = new Date();
-    if (valueSelect.toLowerCase() === "monthly") {
-      if (date.getMonth() + 1 === currTimeValue) {
-        return { opacity: 0 };
-      }
-    } else if (valueSelect.toLowerCase() === "yearly") {
-      if (date.getFullYear() === currTimeValue) {
-        return { opacity: 0 };
-      } else {
-        return { opacity: 1 };
-      }
-    } else if (valueSelect.toLowerCase() === "weekly") {
-      // setCurrTimeValue(getEndOfWeek(date).getDate());
-      return { opacity: 0 };
-    }
+    if (period === "weekly") return true;
+    if (period === "monthly") return currTimeValue >= date.getMonth() + 1;
+    if (period === "yearly") return currTimeValue >= date.getFullYear();
+    return false;
+  })();
+
+  const handlePrev = () => {
+    if (isPrevDisabled) return;
+    setCurrTimeValue((state) => state - 1);
+  };
+
+  const handleNext = () => {
+    if (isNextDisabled) return;
+    setCurrTimeValue((state) => state + 1);
   };
 
   return (
     <View style={styles.header}>
       <Pressable
-        style={({ pressed }) => pressed && styles.pressed}
-        onPress={() => {
-          setCurrTimeValue((state) => {
-            if ((valueSelect.toLowerCase() === "monthly" || valueSelect.toLowerCase() === "yearly") && state > 1 ) {
-              return state - 1;
-            } else {
-              return state;
-            }
-          });
-        }}
+        onPress={handlePrev}
+        disabled={isPrevDisabled}
+        style={({ pressed }) => [
+          styles.iconBtn,
+          isPrevDisabled && styles.iconBtnDisabled,
+          pressed && !isPrevDisabled && styles.pressed,
+        ]}
       >
-        <Ionicons
-          name="chevron-back"
-          size={20}
-          color="#fff"
-          style={valueSelect.toLowerCase() === "weekly" && { opacity: 0 }}
-        />
+        <Ionicons name="chevron-back" size={18} color="#fff" />
       </Pressable>
-      <Text style={styles.time}>
-        {currTimeLabel} - {currTimeValue}
-      </Text>
+
+      <View style={styles.timeWrap}>
+        <Text style={styles.time}>
+          {currTimeLabel}
+          <Text style={styles.timeSep}> · </Text>
+          <Text style={styles.timeValue}>{currTimeValue}</Text>
+        </Text>
+      </View>
+
       <Pressable
-        style={({ pressed }) => pressed && styles.pressed}
-        onPress={() =>
-          setCurrTimeValue((state) => {
-            if (valueSelect.toLowerCase() === "monthly") {
-              if (state < new Date().getMonth() + 1) {
-                return state + 1;
-              } else {
-                return state;
-              }
-            } else if (valueSelect.toLowerCase() === "yearly") {
-              if (state < new Date().getFullYear()) {
-                return state + 1;
-              } else {
-                return state;
-              }
-            } else {
-              return state;
-            }
-          })
-        }
+        onPress={handleNext}
+        disabled={isNextDisabled}
+        style={({ pressed }) => [
+          styles.iconBtn,
+          isNextDisabled && styles.iconBtnDisabled,
+          pressed && !isNextDisabled && styles.pressed,
+        ]}
       >
-        <Ionicons
-          name="chevron-forward"
-          size={20}
-          color="#fff"
-          style={checkInValid()}
-        />
+        <Ionicons name="chevron-forward" size={18} color="#fff" />
       </Pressable>
     </View>
   );
@@ -91,14 +76,43 @@ export default HeaderTime;
 const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  iconBtn: {
+    width: 20,
+    height: 20,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    // backgroundColor: "rgba(255,255,255,0.12)",
+  },
+  iconBtnDisabled: {
+    opacity: 0,
+  },
+  timeWrap: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 14,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    minWidth: 60,
+    alignItems: "center",
   },
   time: {
     color: GlobalStyles.colors.primary50,
-    fontSize: 17,
-    fontWeight: "300",
-    marginHorizontal: 8,
+    fontSize: 15,
+    fontWeight: "500",
+    textTransform: "capitalize",
+  },
+  timeSep: {
+    color: "rgba(255,255,255,0.55)",
+    fontWeight: "400",
+  },
+  timeValue: {
+    color: "#fff",
+    fontWeight: "700",
   },
   pressed: {
-    opacity: 0.65,
+    opacity: 0.6,
   },
 });

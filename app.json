@@ -4,7 +4,7 @@
     "slug": "expense-stracker-app",
     "owner": "thuantd",
     "scheme": "expensetracker",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/pig.png",
     "userInterfaceStyle": "light",

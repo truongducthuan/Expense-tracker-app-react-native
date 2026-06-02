@@ -59,7 +59,7 @@ const ExpenseForm = ({
   return (
     <>
       <View style={styles.form}>
-        <Text style={styles.title}>{t("your")} {t(titleName)}</Text>
+        <Text style={styles.title}>{t(titleName)}</Text>
         <View style={styles.inputRow}>
           <PrimaryInput
             label={t("amount")}

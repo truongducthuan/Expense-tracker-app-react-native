@@ -1,10 +1,19 @@
-import { useLayoutEffect, useState } from "react";
-import { View, StyleSheet, ScrollView, RefreshControl } from "react-native";
+import { useEffect, useLayoutEffect, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  RefreshControl,
+  ActivityIndicator,
+} from "react-native";
 import { VictoryPie, VictoryTheme, VictoryLabel } from "victory-native";
 import { Line } from "react-native-svg";
 
 import { ExpenseStore } from "../store/context";
 import { AuthStore } from "../store/authContext";
+import { useLanguage } from "../store/languageContext";
+import { GlobalStyles } from "../constants/styles";
 import useRefresh from "../hooks/useRefresh";
 import useExpenseChartData from "../hooks/useExpenseChartData";
 import NavItem from "../components/ui/NavItem";
@@ -33,10 +42,18 @@ function ExpenseChart({ navigation }) {
   const { valueSelectChart, setValueSelectChart, refreshExpenses } =
     ExpenseStore();
   const { user } = AuthStore();
+  const { t } = useLanguage();
   const [title, setTitle] = useState("expense");
+  const [loading, setLoading] = useState(false);
 
   const { data, total, currTimeLabel, currTimeValue, setCurrTimeValue } =
     useExpenseChartData(title);
+
+  useEffect(() => {
+    setLoading(true);
+    const timer = setTimeout(() => setLoading(false), 450);
+    return () => clearTimeout(timer);
+  }, [valueSelectChart, currTimeValue, title]);
 
   const { refreshing, handleRefresh } = useRefresh(() =>
     refreshExpenses(user.email)
@@ -66,66 +83,90 @@ function ExpenseChart({ navigation }) {
         <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
       }
     >
-      <View style={styles.nav}>
-        <NavItem
-          onPress={setTitle}
-          isNav={title === "expense"}
-          style={styles.horizon}
-          total={total.expense}
-          color={EXPENSE_COLOR.base}
-          activeColor={EXPENSE_COLOR.active}
-          isLabel={false}
-        >
-          Expense
-        </NavItem>
-        <NavItem
-          onPress={setTitle}
-          isNav={title === "income"}
-          style={styles.horizon}
-          total={total.income}
-          color={INCOME_COLOR.base}
-          activeColor={INCOME_COLOR.active}
-          isLabel={false}
-        >
-          Income
-        </NavItem>
-      </View>
+      {loading ? (
+        <View style={styles.loading}>
+          <ActivityIndicator
+            size="large"
+            color={GlobalStyles.colors.primary500}
+          />
+        </View>
+      ) : data.length === 0 ? (
+        <View style={styles.empty}>
+          <Text style={styles.emptyText}>{t("no_expense")}</Text>
+        </View>
+      ) : (
+        <>
+          <View style={styles.nav}>
+            <View style={styles.navCol}>
+              <NavItem
+                onPress={setTitle}
+                isNav={title === "expense"}
+                style={styles.horizon}
+                total={total.expense}
+                color={EXPENSE_COLOR.base}
+                activeColor={EXPENSE_COLOR.active}
+                isLabel={false}
+              >
+                Expense
+              </NavItem>
+              <Text style={styles.navLabel}>{t("total_expense")}</Text>
+            </View>
+            <View style={styles.navCol}>
+              <NavItem
+                onPress={setTitle}
+                isNav={title === "income"}
+                style={styles.horizon}
+                total={total.income}
+                color={INCOME_COLOR.base}
+                activeColor={INCOME_COLOR.active}
+                isLabel={false}
+              >
+                Income
+              </NavItem>
+              <Text style={styles.navLabel}>{t("total_income")}</Text>
+            </View>
+          </View>
+          {title === "income" && <TotalTypeIncome />}
 
-      {title === "income" && <TotalTypeIncome />}
+          <View style={styles.chart}>
+            <VictoryPie
+              key={data}
+              data={data}
+              x={"x"}
+              y={"y"}
+              width={360}
+              height={360}
+              padding={{ top: 30, bottom: 30, left: 75, right: 75 }}
+              colorScale={data.map((slice) => slice.color)}
+              animate={{ duration: 2000 }}
+              theme={VictoryTheme.material}
+              sortKey="y"
+              sortOrder="descending"
+              labelPosition="centroid"
+              labelRadius={({ radius }) => radius + 22}
+              labelIndicator={
+                <LabelLine data={data} threshold={LABEL_THRESHOLD} />
+              }
+              labelIndicatorInnerOffset={8}
+              labelIndicatorOuterOffset={4}
+              labels={({ datum }) =>
+                datum.y >= LABEL_THRESHOLD
+                  ? `${datum.x} ${Math.round(datum.y)}%`
+                  : null
+              }
+              labelComponent={
+                <VictoryLabel style={{ fill: "#000", fontSize: 8 }} />
+              }
+            />
+          </View>
 
-      <View style={styles.chart}>
-        <VictoryPie
-          key={data}
-          data={data}
-          x={"x"}
-          y={"y"}
-          width={360}
-          height={360}
-          padding={{ top: 30, bottom: 30, left: 75, right: 75 }}
-          colorScale={data.map((slice) => slice.color)}
-          animate={{ duration: 2000 }}
-          theme={VictoryTheme.material}
-          sortKey="y"
-          sortOrder="descending"
-          labelPosition="centroid"
-          labelRadius={({ radius }) => radius + 22}
-          labelIndicator={<LabelLine data={data} threshold={LABEL_THRESHOLD} />}
-          labelIndicatorInnerOffset={8}
-          labelIndicatorOuterOffset={4}
-          labels={({ datum }) =>
-            datum.y >= LABEL_THRESHOLD
-              ? `${datum.x} ${Math.round(datum.y)}%`
-              : null
-          }
-          labelComponent={<VictoryLabel style={{ fill: "#000", fontSize: 8 }} />}
-        />
-      </View>
-
-      <View>
-        {data.map((item) => (
-          <ListChar item={item} key={item.x} />
-        ))}
-      </View>
+          <View>
+            {data.map((item) => (
+              <ListChar item={item} key={item.x} />
+            ))}
+          </View>
+        </>
+      )}
     </ScrollView>
   );
 }
@@ -145,8 +186,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingTop: 8,
   },
+  navCol: {
+    alignItems: "center",
+    gap: 4,
+  },
+  navLabel: {
+    fontSize: 12,
+    color: "#666",
+    textAlign: "center",
+  },
   horizon: {
     paddingHorizontal: 40,
     paddingVertical: 4,
+    textAlign: "center",
+  },
+  empty: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 80,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: "#666",
+  },
+  loading: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 120,
   },
 });
