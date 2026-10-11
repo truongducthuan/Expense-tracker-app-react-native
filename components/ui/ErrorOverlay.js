@@ -1,13 +1,28 @@
-import React from "react";
-import { StyleSheet, Text, View, Button } from "react-native";
-import { GlobalStyles } from "../../constants/styles";
+import { StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
+import PrimaryButton from "./PrimaryButton";
+import { GlobalStyles } from "../../constants/styles";
+import { useLanguage } from "../../store/languageContext";
+
+const { colors, spacing, radius, type } = GlobalStyles;
+
+// Error state: plain-language message plus a way forward, never a dead end
+// (Nielsen #9). The caller keeps the user's entered data, so "Okay" returns to
+// the form with everything still filled in.
 const ErrorOverlay = ({ message, onPress }) => {
+  const { t } = useLanguage();
+
   return (
     <View style={styles.container}>
-      <Text style={[styles.text, styles.title]}>An error occurred</Text>
-      <Text style={styles.text}>{message}</Text>
-      <Button onPress={onPress} title="Okay" />
+      <View style={styles.iconCircle}>
+        <Ionicons name="alert-circle-outline" size={32} color={colors.expense} />
+      </View>
+      <Text style={styles.title}>{t("error_occurred")}</Text>
+      <Text style={styles.message}>{message}</Text>
+      <PrimaryButton style={styles.button} onPress={onPress}>
+        {t("okay")}
+      </PrimaryButton>
     </View>
   );
 };
@@ -19,16 +34,32 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: 24,
-    backgroundColor: GlobalStyles.colors.primary700,
+    padding: spacing[5],
+    backgroundColor: colors.screen,
   },
-  text: {
-    textAlign: "center",
-    color: "white",
-    marginBottom: 8,
+  iconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: radius.full,
+    backgroundColor: colors.expenseSurface,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: spacing[4],
   },
   title: {
-    fontSize: 20,
-    fontWeight: "bold",
+    ...type.h3,
+    color: colors.text,
+    textAlign: "center",
+  },
+  message: {
+    ...type.body,
+    color: colors.textMuted,
+    textAlign: "center",
+    marginTop: spacing[2],
+    maxWidth: 300,
+  },
+  button: {
+    marginTop: spacing[5],
+    minWidth: 160,
   },
 });

@@ -1,7 +1,8 @@
 import { useLayoutEffect, useState } from "react";
-import { StyleSheet, Alert, ScrollView, View } from "react-native";
-import IconButton from "../components/ui/IconButton";
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "react-native";
+
 import { GlobalStyles } from "../constants/styles";
+import { CATEGORY_TYPE } from "../constants/config";
 import PrimaryButton from "../components/ui/PrimaryButton";
 import { ExpenseStore } from "../store/context";
 import ExpenseForm from "../components/ExpenseForm";
@@ -12,6 +13,8 @@ import ManagePopup from "../components/popup/ManagePopup";
 import NavExpense from "../components/expenses/NavExpense";
 import { AuthStore } from "../store/authContext";
 import { useLanguage } from "../store/languageContext";
+
+const { colors, spacing } = GlobalStyles;
 
 const ManageExpense = ({ route, navigation }) => {
   const {
@@ -33,7 +36,7 @@ const ManageExpense = ({ route, navigation }) => {
   const [nameHeader, setNameHeader] = useState("");
   const [error, setError] = useState(null);
   const isEditing = !!expenseId;
-  const [titleName, setTitleName] = useState("expense");
+  const [titleName, setTitleName] = useState(CATEGORY_TYPE.EXPENSE);
   const [expensesInput, setExpensesInput] = useState({
     amount: "",
     date: new Date().toISOString().slice(0, 10),
@@ -82,20 +85,35 @@ const ManageExpense = ({ route, navigation }) => {
     setTitleName(nav);
   };
 
-  const handleDelete = async () => {
-    setIsLoading(true);
-    try {
-      await deleteExpenses(expenseId);
-    } catch (err) {
-      setError(t("could_not_delete"));
-    }
-    setIsLoading(false);
-    deleteExpense(expenseId);
-    navigation.goBack();
+  // Deleting is irreversible here, so it asks first (Nielsen #3 — the prototype
+  // offers 5s undo instead; a confirm is the honest equivalent without a
+  // queue to undo from).
+  const handleDelete = () => {
+    Alert.alert(t("delete_expense"), t("delete_expense_confirm"), [
+      { text: t("cancel"), style: "cancel" },
+      {
+        text: t("delete"),
+        style: "destructive",
+        onPress: async () => {
+          setIsLoading(true);
+          try {
+            await deleteExpenses(expenseId);
+            deleteExpense(expenseId);
+            navigation.goBack();
+          } catch (err) {
+            setError(t("could_not_delete"));
+          } finally {
+            setIsLoading(false);
+          }
+        },
+      },
+    ]);
   };
+
   const cancelhandler = () => {
     navigation.goBack();
   };
+
   const handleConfirm = async () => {
     setIsPopup(false);
     setIsLoading(true);
@@ -176,44 +194,69 @@ const ManageExpense = ({ route, navigation }) => {
   }
 
   if (isLoading) {
-    return <Loading />;
+    return <Loading message={t("saving")} />;
   }
 
+  // Save stays disabled until amount, category and account are all set, so the
+  // user is stopped before the error rather than after it (Nielsen #5).
+  const canSave =
+    !!String(expensesInput.amount).replace(/\./g, "").trim() &&
+    !!expensesInput.category.trim() &&
+    !!expensesInput.account.trim();
 
   return (
-    <>
-      {!isEditing && <NavExpense onPress={handleNav} titleName={titleName} />}
-      <ScrollView style={styles.container}>
-        <ExpenseForm
-          setExpenses={setExpensesInput}
-          expenses={expensesInput}
-          setIsPopup={setIsPopup}
-          setNameHeader={setNameHeader}
-          titleName={titleName}
-        />
-        <View style={styles.buttons}>
+    <View style={styles.root}>
+      <KeyboardAvoidingView
+        style={styles.root}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        {!isEditing && <NavExpense onPress={handleNav} titleName={titleName} />}
+
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+        >
+          <ExpenseForm
+            setExpenses={setExpensesInput}
+            expenses={expensesInput}
+            setIsPopup={setIsPopup}
+            setNameHeader={setNameHeader}
+            titleName={titleName}
+          />
+
+          {isEditing && (
+            <PrimaryButton
+              mode="dangerGhost"
+              icon="trash-outline"
+              style={styles.deleteButton}
+              onPress={handleDelete}
+            >
+              {t("delete_expense")}
+            </PrimaryButton>
+          )}
+        </ScrollView>
+
+        {/* Actions pinned to the bottom: the primary action sits in the thumb
+            zone rather than scrolling off the top (Fitts's law). */}
+        <View style={styles.actionBar}>
           <PrimaryButton
-            style={styles.button}
-            mode={"flat"}
+            style={styles.actionSecondary}
+            mode="secondary"
             onPress={cancelhandler}
           >
             {t("cancel")}
           </PrimaryButton>
-          <PrimaryButton style={styles.button} onPress={handleConfirm}>
+          <PrimaryButton
+            style={styles.actionPrimary}
+            onPress={handleConfirm}
+            disabled={!canSave}
+          >
             {isEditing ? t("update") : t("add")}
           </PrimaryButton>
         </View>
-        {isEditing && (
-          <View style={styles.deleteContainer}>
-            <IconButton
-              icon={"trash"}
-              color={GlobalStyles.colors.error500}
-              size={36}
-              onPress={handleDelete}
-            />
-          </View>
-        )}
-      </ScrollView>
+      </KeyboardAvoidingView>
+
       {isPopup && (
         <ManagePopup
           setIsPopup={setIsPopup}
@@ -221,33 +264,41 @@ const ManageExpense = ({ route, navigation }) => {
           titleName={titleName}
         />
       )}
-    </>
+    </View>
   );
 };
 
 export default ManageExpense;
 
 const styles = StyleSheet.create({
-  container: {
+  root: {
     flex: 1,
-    padding: 24,
-    backgroundColor: GlobalStyles.colors.primary800,
+    backgroundColor: colors.screen,
   },
-  deleteContainer: {
-    marginTop: 16,
-    paddingTop: 8,
-    borderTopWidth: 2,
-    borderTopColor: GlobalStyles.colors.primary500,
-    alignItems: "center",
+  scroll: {
+    flex: 1,
   },
-  buttons: {
+  content: {
+    padding: spacing[4],
+    paddingBottom: spacing[5],
+  },
+  deleteButton: {
+    marginTop: spacing[3],
+  },
+  actionBar: {
     flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 20,
+    gap: spacing[3],
+    paddingHorizontal: spacing[4],
+    paddingTop: spacing[3],
+    paddingBottom: spacing[4],
+    backgroundColor: colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
-  button: {
-    minWidth: 120,
-    marginHorizontal: 8,
+  actionSecondary: {
+    flex: 1,
+  },
+  actionPrimary: {
+    flex: 1.4,
   },
 });

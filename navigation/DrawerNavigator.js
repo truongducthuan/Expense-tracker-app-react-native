@@ -2,10 +2,10 @@ import { createDrawerNavigator } from "@react-navigation/drawer";
 import { Ionicons } from "@expo/vector-icons";
 
 import { GlobalStyles } from "../constants/styles";
+import { baseHeaderOptions } from "./navigationTheme";
 import { useLanguage } from "../store/languageContext";
 import ExpenseOverview from "./ExpenseOverview";
 import CustomDrawerContent from "./CustomDrawerContent";
-import Settings from "../screens/Settings";
 // Todo drawer entry is hidden for now; uncomment to restore.
 // import ManageTodoList from "./ManageTodoList";
 
@@ -19,13 +19,14 @@ const DrawerNavigator = () => {
   return (
     <Drawer.Navigator
       screenOptions={{
-        headerStyle: { backgroundColor: "#351401" },
-        headerTintColor: "#fff",
-        sceneContainerStyle: { backgroundColor: "#3f2f25" },
-        drawerContentStyle: { backgroundColor: "#351401" },
-        drawerInactiveTintColor: GlobalStyles.colors.primary500,
-        drawerActiveTintColor: "#351401",
-        drawerActiveBackgroundColor: "#e4baa1",
+        ...baseHeaderOptions,
+        sceneContainerStyle: { backgroundColor: GlobalStyles.colors.screen },
+        drawerContentStyle: { backgroundColor: GlobalStyles.colors.surface },
+        drawerInactiveTintColor: GlobalStyles.colors.textBody,
+        drawerActiveTintColor: GlobalStyles.colors.primary,
+        drawerActiveBackgroundColor: GlobalStyles.colors.primarySurface,
+        drawerItemStyle: { borderRadius: GlobalStyles.radius.md },
+        drawerLabelStyle: { ...GlobalStyles.type.body, fontWeight: "500" },
         drawerHideStatusBarOnOpen: false,
       }}
       drawerContent={(props) => <CustomDrawerContent {...props} />}
@@ -36,8 +37,12 @@ const DrawerNavigator = () => {
         options={{
           title: t("home"),
           headerShown: false,
-          drawerIcon: ({ color, size }) => (
-            <Ionicons name="home" color={color} size={size} />
+          drawerIcon: ({ color, size, focused }) => (
+            <Ionicons
+              name={focused ? "home" : "home-outline"}
+              color={color}
+              size={size}
+            />
           ),
         }}
       />
@@ -52,16 +57,9 @@ const DrawerNavigator = () => {
           ),
         }}
       /> */}
-      <Drawer.Screen
-        name="Settings"
-        component={Settings}
-        options={{
-          title: t("settings"),
-          drawerIcon: ({ color, size }) => (
-            <Ionicons name="settings-outline" color={color} size={size} />
-          ),
-        }}
-      />
+      {/* Settings moved into the tab bar (see ExpenseOverview) so it is
+          reachable without opening the drawer; the drawer keeps the account
+          header and sign-out. */}
     </Drawer.Navigator>
   );
 };

@@ -1,10 +1,11 @@
-import React from "react";
-import { View, Text, StyleSheet, Pressable } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import { GlobalStyles } from "../../constants/styles";
 import { ExpenseStore } from "../../store/context";
 import { useLanguage } from "../../store/languageContext";
+
+const { colors, spacing, radius, type } = GlobalStyles;
 
 const ICONS = {
   weekly: "calendar-outline",
@@ -18,39 +19,35 @@ const ChartPopup = ({ data, setIsPopup, currentValue, onSelect }) => {
   const { t } = useLanguage();
 
   return (
-    <View style={styles.container}>
-      {data.map((i, index) => {
-        const isActive = currentValue === i;
+    <View style={styles.sheet}>
+      {data.map((item, index) => {
+        const isActive = currentValue === item;
         return (
           <Pressable
-            key={i}
+            key={item}
+            accessibilityRole="menuitem"
+            accessibilityState={{ selected: isActive }}
             style={({ pressed }) => [
               styles.item,
               index !== data.length - 1 && styles.divider,
-              isActive && styles.itemActive,
               pressed && styles.pressed,
             ]}
             onPress={() => {
-              setValueSelectChart(i);
+              setValueSelectChart(item);
               setIsPopup(false);
-              onSelect?.(i);
+              onSelect?.(item);
             }}
           >
             <Ionicons
-              name={ICONS[i] || "ellipse-outline"}
+              name={ICONS[item] || "ellipse-outline"}
               size={18}
-              color={isActive ? GlobalStyles.colors.primary500 : "#555"}
+              color={isActive ? colors.primary : colors.textMuted}
             />
             <Text style={[styles.text, isActive && styles.textActive]}>
-              {t(i)}
+              {t(item)}
             </Text>
             {isActive && (
-              <Ionicons
-                name="checkmark"
-                size={18}
-                color={GlobalStyles.colors.primary500}
-                style={styles.check}
-              />
+              <Ionicons name="checkmark" size={18} color={colors.primary} />
             )}
           </Pressable>
         );
@@ -62,49 +59,42 @@ const ChartPopup = ({ data, setIsPopup, currentValue, onSelect }) => {
 export default ChartPopup;
 
 const styles = StyleSheet.create({
-  container: {
+  sheet: {
     position: "absolute",
-    right: 0,
-    top: 55,
-    minWidth: 150,
-    backgroundColor: "#fff",
-    paddingVertical: 6,
-    borderRadius: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
-    shadowRadius: 8,
-    elevation: 6,
+    right: spacing[4],
+    top: 52,
+    minWidth: 172,
+    backgroundColor: colors.surface,
+    paddingVertical: spacing[1],
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
     zIndex: 10,
+    ...GlobalStyles.shadow.lg,
   },
   item: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    gap: 10,
+    minHeight: 44,
+    paddingVertical: spacing[2],
+    paddingHorizontal: spacing[3] + 2,
+    gap: spacing[3],
   },
   divider: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#eee",
-  },
-  itemActive: {
-    backgroundColor: GlobalStyles.colors.primary50,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.n100,
   },
   text: {
     flex: 1,
-    fontSize: 14,
-    color: "#333",
+    ...type.body,
+    color: colors.textBody,
     textTransform: "capitalize",
   },
   textActive: {
-    color: GlobalStyles.colors.primary500,
+    color: colors.primary,
     fontWeight: "600",
   },
-  check: {
-    marginLeft: 6,
-  },
   pressed: {
-    opacity: 0.65,
+    backgroundColor: colors.surfaceAlt,
   },
 });

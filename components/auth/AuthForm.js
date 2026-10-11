@@ -1,10 +1,22 @@
-import { StyleSheet, Text, View, Pressable, Image } from "react-native";
+import {
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import PrimaryInput from "../ui/PrimaryInput";
+import PrimaryButton from "../ui/PrimaryButton";
 import LanguageSwitch from "../ui/LanguageSwitch";
-import { GlobalStyles, colorsArray } from "../../constants";
+import { GlobalStyles } from "../../constants";
 import { useLanguage } from "../../store/languageContext";
+
+const { colors, spacing, radius, type } = GlobalStyles;
 
 const AuthForm = ({
   isLogin,
@@ -19,187 +31,213 @@ const AuthForm = ({
   const { t } = useLanguage();
 
   return (
-    <View style={styles.container}>
-      <LanguageSwitch style={styles.langSwitch} />
-
-      <View style={styles.logoBox}>
-        <Image source={require("../../assets/pig.png")} style={styles.image} />
-      </View>
-
-      <Text style={styles.title}>{isLogin ? t("login") : t("sign_up")}</Text>
-
-      <PrimaryInput
-        label={t("email")}
-        textInputConfig={{
-          onChangeText: (text) => onChangeField("email", text),
-          keyboardType: "email-address",
-          autoCapitalize: "none",
-        }}
-        value={values.email}
-        isLogin={true}
-      />
-
-      <PrimaryInput
-        label={t("password")}
-        textInputConfig={{
-          onChangeText: (text) => onChangeField("password", text),
-          secureTextEntry: true,
-        }}
-        value={values.password}
-        isLogin={true}
-      />
-
-      <Pressable
-        onPress={onSubmit}
-        style={({ pressed }) => [styles.submitButton, pressed && styles.pressed]}
+    <KeyboardAvoidingView
+      style={styles.root}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.submitText}>
-          {isLogin ? t("log_in") : t("sign_up")}
-        </Text>
-      </Pressable>
+        <View style={styles.topBar}>
+          <LanguageSwitch />
+        </View>
 
-      {isLogin && (
+        <View style={styles.brand}>
+          <View style={styles.logoBox}>
+            <Image source={require("../../assets/pig.png")} style={styles.image} />
+          </View>
+          <Text style={styles.appName}>MoneyMind</Text>
+          <Text style={styles.tagline}>{t("app_tagline")}</Text>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.title}>{isLogin ? t("login") : t("sign_up")}</Text>
+
+          <PrimaryInput
+            label={t("email")}
+            textInputConfig={{
+              onChangeText: (text) => onChangeField("email", text),
+              keyboardType: "email-address",
+              autoCapitalize: "none",
+              autoCorrect: false,
+            }}
+            placeholder="you@example.com"
+            value={values.email}
+            isLogin
+          />
+
+          <PrimaryInput
+            label={t("password")}
+            textInputConfig={{
+              onChangeText: (text) => onChangeField("password", text),
+              secureTextEntry: true,
+            }}
+            placeholder="••••••"
+            value={values.password}
+            isLogin
+          />
+
+          <PrimaryButton style={styles.submit} onPress={onSubmit}>
+            {isLogin ? t("log_in") : t("sign_up")}
+          </PrimaryButton>
+
+          {isLogin && (
+            <Pressable
+              onPress={onForgotPassword}
+              hitSlop={8}
+              style={({ pressed }) => [styles.linkWrap, pressed && styles.pressed]}
+            >
+              <Text style={styles.link}>{t("forgot_password")}</Text>
+            </Pressable>
+          )}
+
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>{t("or")}</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <Pressable
+            onPress={onGooglePress}
+            disabled={!googleReady}
+            accessibilityRole="button"
+            style={({ pressed }) => [
+              styles.googleButton,
+              (!googleReady || pressed) && styles.pressed,
+            ]}
+          >
+            <Ionicons name="logo-google" size={19} color={colors.textBody} />
+            <Text style={styles.googleText}>{t("continue_with_google")}</Text>
+          </Pressable>
+        </View>
+
         <Pressable
-          onPress={onForgotPassword}
-          style={({ pressed }) => pressed && styles.pressed}
+          onPress={onToggleMode}
+          hitSlop={8}
+          style={({ pressed }) => [styles.toggleWrap, pressed && styles.pressed]}
         >
-          <Text style={styles.forgotText}>{t("forgot_password")}</Text>
+          <Text style={styles.toggleText}>
+            {isLogin ? t("create_new_user") : t("log_in_instead")}
+          </Text>
         </Pressable>
-      )}
-
-      <Pressable
-        onPress={onToggleMode}
-        style={({ pressed }) => pressed && styles.pressed}
-      >
-        <Text style={styles.toggleText}>
-          {isLogin ? t("create_new_user") : t("log_in_instead")}
-        </Text>
-      </Pressable>
-
-      <View style={styles.divider}>
-        <View style={styles.dividerLine} />
-        <Text style={styles.dividerText}>{t("or")}</Text>
-        <View style={styles.dividerLine} />
-      </View>
-
-      <Pressable
-        onPress={onGooglePress}
-        disabled={!googleReady}
-        style={({ pressed }) => [
-          styles.googleButton,
-          (!googleReady || pressed) && styles.pressed,
-        ]}
-      >
-        <Ionicons
-          name="logo-google"
-          size={20}
-          color={GlobalStyles.colors.primary700}
-        />
-        <Text style={styles.googleText}>{t("continue_with_google")}</Text>
-      </Pressable>
-    </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
 export default AuthForm;
 
 const styles = StyleSheet.create({
-  container: {
+  root: {
     flex: 1,
-    backgroundColor: GlobalStyles.colors.primary700,
-    paddingTop: 56,
-    paddingHorizontal: 24,
+    backgroundColor: colors.primarySurface,
   },
-  langSwitch: {
-    position: "absolute",
-    top: 18,
-    right: 20,
+  content: {
+    flexGrow: 1,
+    padding: spacing[4],
+    paddingBottom: spacing[6],
+  },
+  topBar: {
+    alignItems: "flex-end",
+  },
+  brand: {
+    alignItems: "center",
+    marginTop: spacing[3],
+    marginBottom: spacing[5],
+    gap: spacing[1],
   },
   logoBox: {
-    alignSelf: "center",
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: GlobalStyles.colors.primary50,
+    width: 88,
+    height: 88,
+    borderRadius: radius.full,
+    backgroundColor: colors.surface,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 12,
-    marginBottom: 14,
+    marginBottom: spacing[2],
+    ...GlobalStyles.shadow.sm,
   },
   image: {
-    width: 76,
-    height: 76,
+    width: 64,
+    height: 64,
     resizeMode: "contain",
   },
+  appName: {
+    ...type.h1,
+    fontSize: 26,
+    color: colors.primary,
+    letterSpacing: -0.4,
+  },
+  tagline: {
+    ...type.caption,
+    color: colors.textMuted,
+    textAlign: "center",
+  },
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing[4],
+    ...GlobalStyles.shadow.md,
+  },
   title: {
-    color: "#fff",
-    fontSize: 22,
-    fontWeight: "700",
-    textAlign: "center",
-    marginBottom: 18,
-    letterSpacing: 0.3,
+    ...type.h3,
+    color: colors.text,
+    marginBottom: spacing[2],
   },
-  submitButton: {
-    backgroundColor: GlobalStyles.colors.accent500,
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: "center",
-    marginTop: 18,
-    shadowColor: "#000",
-    shadowOpacity: 0.15,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-    elevation: 3,
+  submit: {
+    marginTop: spacing[4],
   },
-  submitText: {
-    color: GlobalStyles.colors.primary800,
-    fontSize: 16,
-    fontWeight: "700",
-    letterSpacing: 0.5,
+  linkWrap: {
+    alignSelf: "center",
+    paddingVertical: spacing[3],
   },
-  forgotText: {
-    color: '#fff',
-    fontSize: 14,
-    textAlign: "center",
-    marginTop: 14,
-    textDecorationLine: "underline",
-  },
-  toggleText: {
-    color: '#fff',
-    fontSize: 15,
-    textAlign: "center",
-    marginTop: 14,
+  link: {
+    ...type.caption,
+    fontSize: 13.5,
+    color: colors.primary,
+    fontWeight: "500",
   },
   divider: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 22,
-    marginBottom: 14,
-    gap: 10,
+    gap: spacing[3],
+    marginTop: spacing[2],
+    marginBottom: spacing[4],
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: GlobalStyles.colors.primary400,
+    backgroundColor: colors.border,
   },
   dividerText: {
-    color: GlobalStyles.colors.primary100,
-    fontSize: 13,
+    ...type.caption,
+    color: colors.textMuted,
   },
   googleButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 10,
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    paddingVertical: 13,
-    paddingHorizontal: 20,
+    gap: spacing[2] + 2,
+    minHeight: 48,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
   },
   googleText: {
-    color: GlobalStyles.colors.primary700,
-    fontSize: 16,
+    ...type.bodyEmphasis,
     fontWeight: "600",
+    color: colors.textBody,
+  },
+  toggleWrap: {
+    alignSelf: "center",
+    marginTop: spacing[5],
+    paddingVertical: spacing[2],
+  },
+  toggleText: {
+    ...type.body,
+    color: colors.primary,
+    fontWeight: "500",
   },
   pressed: {
     opacity: 0.7,

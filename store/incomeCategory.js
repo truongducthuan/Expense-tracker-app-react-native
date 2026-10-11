@@ -5,8 +5,10 @@ const Context = createContext();
 const reducer = (state, action) => {
   switch (action.type) {
     case "SET":
-      const data = action.payload.reverse();
-      return data;
+      // No reordering here: the query already returns rows in the order the
+      // user arranged them (ORDER BY position). The old `.reverse()` both
+      // flipped that order and mutated the caller's array in place.
+      return action.payload;
     case "ADD":
       const newData = [...state, action.payload];
       return newData;

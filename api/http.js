@@ -37,3 +37,11 @@ export const updateExpenses = async (id, expense) => {
 export const deleteExpenses = async (id) => {
   return axios.delete(`${URL}/expenses/${id}.json`);
 };
+
+// Updates individual fields without resending the whole record. `updateExpenses`
+// uses PUT, which replaces the object — fine when the form holds every field,
+// wrong for touching just the wallet name on an existing entry.
+export const patchExpense = async (id, patch) => {
+  const res = await axios.patch(`${URL}/expenses/${id}.json`, patch);
+  return res.data;
+};

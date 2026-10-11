@@ -1,24 +1,59 @@
-import { Pressable, StyleSheet, View, Text } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+
 import { GlobalStyles } from "../../constants/styles";
 
-const PrimaryButton = ({ children, onPress, mode, style, colorText }) => {
+const { colors, spacing, radius, type } = GlobalStyles;
+
+// Button variants from the design system:
+//   primary (default) · secondary (outline) · flat/ghost · destructive
+// `mode="flat"` is kept as an alias for ghost so existing callers keep working.
+const PrimaryButton = ({
+  children,
+  onPress,
+  mode = "primary",
+  style,
+  colorText,
+  icon,
+  disabled = false,
+}) => {
+  const variant = mode === "flat" ? "ghost" : mode;
+
   return (
     <View style={style}>
       <Pressable
-        onPress={onPress}
-        style={({ pressed }) => pressed && styles.pressed}
+        onPress={disabled ? undefined : onPress}
+        disabled={disabled}
+        accessibilityRole="button"
+        accessibilityState={{ disabled }}
+        style={({ pressed }) => [
+          styles.base,
+          VARIANTS[variant]?.container || VARIANTS.primary.container,
+          disabled && styles.disabled,
+          pressed && !disabled && styles.pressed,
+        ]}
       >
-        <View style={[styles.button, mode === "flat" && styles.flat]}>
-          <Text
-            style={[
-              styles.buttonText,
-              mode === "flat" && styles.flexText,
-              colorText === "login" && styles.colorText,
-            ]}
-          >
-            {children}
-          </Text>
-        </View>
+        {!!icon && (
+          <Ionicons
+            name={icon}
+            size={18}
+            color={
+              disabled
+                ? colors.textMuted
+                : (VARIANTS[variant]?.text || VARIANTS.primary.text).color
+            }
+          />
+        )}
+        <Text
+          style={[
+            styles.label,
+            VARIANTS[variant]?.text || VARIANTS.primary.text,
+            disabled && styles.labelDisabled,
+            colorText === "login" && styles.loginText,
+          ]}
+        >
+          {children}
+        </Text>
       </Pressable>
     </View>
   );
@@ -26,30 +61,69 @@ const PrimaryButton = ({ children, onPress, mode, style, colorText }) => {
 
 export default PrimaryButton;
 
+const VARIANTS = {
+  primary: {
+    container: { backgroundColor: colors.primary },
+    text: { color: colors.onPrimary },
+  },
+  secondary: {
+    container: {
+      backgroundColor: "transparent",
+      borderWidth: 1.5,
+      borderColor: colors.primary,
+    },
+    text: { color: colors.primary },
+  },
+  ghost: {
+    container: { backgroundColor: "transparent" },
+    text: { color: colors.textMuted },
+  },
+  destructive: {
+    container: { backgroundColor: colors.expenseText },
+    text: { color: colors.onPrimary },
+  },
+  // Low-emphasis destructive action: red text on a tinted surface, so deleting
+  // never competes with the primary action for attention.
+  dangerGhost: {
+    container: {
+      backgroundColor: colors.expenseSurface,
+      borderWidth: 1,
+      borderColor: "#FBCACB",
+    },
+    text: { color: colors.expenseText },
+  },
+};
+
 const styles = StyleSheet.create({
-  button: {
-    borderRadius: 4,
-    padding: 8,
-    backgroundColor: GlobalStyles.colors.primary500,
+  base: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing[2],
+    minHeight: 48,
+    paddingVertical: spacing[3],
+    paddingHorizontal: spacing[4],
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    borderColor: "transparent",
   },
-  flat: {
-    backgroundColor: "transparent",
-  },
-  buttonText: {
-    color: "#fff",
+  label: {
+    ...type.bodyEmphasis,
+    fontWeight: "600",
     textAlign: "center",
   },
-  flexText: {
-    color: GlobalStyles.colors.primary200,
+  disabled: {
+    backgroundColor: colors.border,
+    borderColor: "transparent",
+  },
+  labelDisabled: {
+    color: colors.textMuted,
   },
   pressed: {
-    opacity: 0.75,
-    backgroundColor: GlobalStyles.colors.primary100,
-    borderRadius: 4,
+    opacity: 0.8,
   },
-  colorText: {
-    color: "white",
+  loginText: {
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: "700",
   },
 });

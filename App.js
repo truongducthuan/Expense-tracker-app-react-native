@@ -1,36 +1,46 @@
 import "react-native-gesture-handler";
 import { useEffect } from "react";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { StatusBar } from "expo-status-bar";
 import { NavigationContainer } from "@react-navigation/native";
 import * as SplashScreen from "expo-splash-screen";
+import * as Notifications from "expo-notifications";
 
 import ContextProvider from "./store";
 import RootNavigator from "./navigation/RootNavigator";
-import {
-  initAccountDB,
-  initCategoryExpense,
-  initCategoryIncomeDB,
-  initTodo,
-} from "./util/database";
+import { appNavigationTheme } from "./navigation/navigationTheme";
+import { initDatabases } from "./util/database";
 
 SplashScreen.preventAutoHideAsync();
 
+// Show the daily reminder even while the app is in the foreground — otherwise
+// a user who happens to have it open at 20:00 silently misses the nudge.
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: false,
+    shouldSetBadge: false,
+  }),
+});
+
 export default function App() {
+  // One entry point: it runs every table's migrations and only then lets the
+  // screens' reads through, so no screen can render pre-migration rows.
   useEffect(() => {
-    initCategoryIncomeDB();
-    initCategoryExpense();
-    initAccountDB();
-    initTodo();
+    initDatabases();
   }, []);
 
   return (
-    <>
-      <StatusBar style="auto" />
+    // Gesture Handler v2 needs this at the root for gestures declared with the
+    // new API (the drag-to-reorder list) to receive touches on Android.
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      {/* The header is teal everywhere, so the status bar content is always light. */}
+      <StatusBar style="light" />
       <ContextProvider>
-        <NavigationContainer>
+        <NavigationContainer theme={appNavigationTheme}>
           <RootNavigator />
         </NavigationContainer>
       </ContextProvider>
-    </>
+    </GestureHandlerRootView>
   );
 }

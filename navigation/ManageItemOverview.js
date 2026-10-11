@@ -58,8 +58,12 @@ const ManageItemOverview = () => {
         options={{
           title: t("manage_account"),
           tabBarLabel: t("account"),
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="logo-closed-captioning" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons
+              name={focused ? "wallet" : "wallet-outline"}
+              size={size}
+              color={color}
+            />
           ),
         }}
       />

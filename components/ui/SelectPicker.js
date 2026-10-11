@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { View, StyleSheet, Text, Pressable } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import ChartPopup from "../popup/ChartPopup";
 import { GlobalStyles } from "../../constants/styles";
 import { ExpenseStore } from "../../store/context";
 import { useLanguage } from "../../store/languageContext";
+
+const { colors, spacing, radius } = GlobalStyles;
 
 const EXPENSE = ["weekly", "monthly", "yearly", "total"];
 const TODO = ["weekly", "monthly", "yearly"];
@@ -15,25 +17,22 @@ const SelectPicker = ({ mode, onSelect }) => {
   const { t } = useLanguage();
   const [isPopup, setIsPopup] = useState(false);
 
-  const showPopup = () => {
-    setIsPopup(!isPopup);
-  };
-
   return (
     <>
-      <View>
-        <Pressable
-          onPress={showPopup}
-          style={({ pressed }) => [styles.container, pressed && styles.pressed]}
-        >
-          <Text style={styles.text}>{t(valueSelectChart)}</Text>
-          <Ionicons
-            name={isPopup ? "chevron-up" : "chevron-down"}
-            size={16}
-            color="#fff"
-          />
-        </Pressable>
-      </View>
+      <Pressable
+        onPress={() => setIsPopup((open) => !open)}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: isPopup }}
+        style={({ pressed }) => [styles.trigger, pressed && styles.pressed]}
+      >
+        <Text style={styles.text}>{t(valueSelectChart)}</Text>
+        <Ionicons
+          name={isPopup ? "chevron-up" : "chevron-down"}
+          size={15}
+          color={colors.onPrimary}
+        />
+      </Pressable>
+
       {isPopup && (
         <ChartPopup
           data={mode === "todo" ? TODO : EXPENSE}
@@ -49,30 +48,25 @@ const SelectPicker = ({ mode, onSelect }) => {
 export default SelectPicker;
 
 const styles = StyleSheet.create({
-  container: {
+  trigger: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    gap: 6,
-    height: 28,
-    minWidth: 80,
-    borderWidth: 1,
-    borderColor: GlobalStyles.colors.primary50,
-    marginRight: 24,
-    borderRadius: 6,
-    paddingVertical: 2,
-    paddingHorizontal: 10,
+    justifyContent: "center",
+    gap: spacing[1] + 2,
+    minHeight: 32,
+    marginRight: spacing[4],
+    paddingVertical: spacing[1] + 2,
+    paddingHorizontal: spacing[3],
+    borderRadius: radius.full,
+    backgroundColor: "rgba(255,255,255,0.18)",
   },
   text: {
-    color: "#fff",
+    color: colors.onPrimary,
     textTransform: "capitalize",
-    fontSize: 14,
-  },
-  header: {
-    fontSize: 32,
-    backgroundColor: "#fff",
+    fontSize: 13.5,
+    fontWeight: "600",
   },
   pressed: {
-    opacity: 0.6,
+    opacity: 0.7,
   },
 });

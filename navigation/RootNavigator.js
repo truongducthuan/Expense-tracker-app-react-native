@@ -4,7 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import AppLoading from "expo-app-loading";
 import * as SplashScreen from "expo-splash-screen";
 
-import { GlobalStyles } from "../constants/styles";
+import { baseHeaderOptions } from "./navigationTheme";
 import { AuthStore } from "../store/authContext";
 import { useLanguage } from "../store/languageContext";
 
@@ -14,6 +14,8 @@ import Authentication from "../screens/Authentication";
 import ManageExpense from "../screens/ManageExpense";
 import AddManageItem from "../screens/AddManageItem";
 import AnualYear from "../screens/AnualYear";
+import ManageBudget from "../screens/ManageBudget";
+import ManageGoal from "../screens/ManageGoal";
 import ManagerTodo from "../components/todoList/ManagerTodo";
 
 const Stack = createNativeStackNavigator();
@@ -21,7 +23,7 @@ const AuthStack = createNativeStackNavigator();
 
 function AuthenticationApp() {
   return (
-    <AuthStack.Navigator>
+    <AuthStack.Navigator screenOptions={{ headerShown: false }}>
       <AuthStack.Screen name="Authentication" component={Authentication} />
     </AuthStack.Navigator>
   );
@@ -61,12 +63,7 @@ function Root() {
 const RootNavigator = () => {
   const { t } = useLanguage();
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerStyle: { backgroundColor: GlobalStyles.colors.primary500 },
-        headerTintColor: "#fff",
-      }}
-    >
+    <Stack.Navigator screenOptions={baseHeaderOptions}>
       <Stack.Screen
         name="Navigation"
         component={Root}
@@ -91,6 +88,16 @@ const RootNavigator = () => {
         name="AnnualYear"
         component={AnualYear}
         options={{ title: t("annual_statistical") }}
+      />
+      <Stack.Screen
+        name="ManageBudget"
+        component={ManageBudget}
+        options={{ presentation: "modal" }}
+      />
+      <Stack.Screen
+        name="ManageGoal"
+        component={ManageGoal}
+        options={{ presentation: "modal" }}
       />
       <Stack.Screen
         name="ManageItem"

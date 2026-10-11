@@ -57,6 +57,53 @@ export function getEndOfWeek(date) {
   return new Date(now.setDate(diff));
 }
 
+// Day key (YYYY-MM-DD) used to bucket transactions into day sections.
+export function getDayKey(time) {
+  return getFormatDate(time);
+}
+
+// Human day label: "Today"/"Yesterday" for the two most recent days, otherwise
+// a short day-and-month. Labels are localised by the caller via `labels`.
+export function getDayLabel(dayKey, labels = {}) {
+  const todayKey = getFormatDate(new Date());
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  if (dayKey === todayKey) return labels.today || "Today";
+  if (dayKey === getFormatDate(yesterday)) return labels.yesterday || "Yesterday";
+
+  const [year, month, day] = dayKey.split("-");
+  const thisYear = String(new Date().getFullYear());
+  return year === thisYear ? `${day}/${month}` : `${day}/${month}/${year}`;
+}
+
+// Groups transactions into day sections, newest day first, for a SectionList.
+// Each section carries the day's net total so the header can show it
+// (Gestalt — Proximity: same-day rows read as one block).
+export function groupByDay(items = [], labels = {}) {
+  const buckets = new Map();
+
+  for (const item of items) {
+    const key = getDayKey(item.date);
+    if (!buckets.has(key)) buckets.set(key, []);
+    buckets.get(key).push(item);
+  }
+
+  return [...buckets.entries()]
+    .sort((a, b) => (a[0] < b[0] ? 1 : -1))
+    .map(([key, data]) => ({
+      key,
+      title: getDayLabel(key, labels),
+      net: data.reduce((sum, item) => {
+        const amount = Number(item.amount || 0);
+        if (item.type === "income") return sum + amount;
+        if (item.type === "expense") return sum - amount;
+        return sum;
+      }, 0),
+      data: [...data].sort((a, b) => new Date(b.date) - new Date(a.date)),
+    }));
+}
+
 // Filters items by the selected period ("weekly" | "monthly" | "yearly").
 export function filterByPeriod(items, period, currTimeValue) {
   const today = new Date();
