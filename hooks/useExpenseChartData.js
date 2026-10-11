@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 
 import { ExpenseStore } from "../store/context";
-import { colorsArray } from "../constants/color";
+import { CHART_SERIES, CHART_OTHER_COLOR } from "../constants/color";
 import { buildPieData, calcTotal } from "../util/chart";
 import { filterByPeriod, getStartOfWeek, getEndOfWeek } from "../util/date";
 
 // Owns the period state and derives the pie data + totals for ExpenseChart.
-export default function useExpenseChartData(title) {
+// `otherLabel` names the slice that absorbs categories past the last colour
+// slot — pass the translated string so the legend stays localised.
+export default function useExpenseChartData(title, otherLabel = "Other") {
   const { expenses, valueSelectChart } = ExpenseStore();
 
   const [currTimeLabel, setCurrTimeLabel] = useState("m");
@@ -40,8 +42,13 @@ export default function useExpenseChartData(title) {
       expense: calcTotal(expenseArr),
       income: calcTotal(incomeArr),
     });
-    setData(buildPieData(title === "expense" ? expenseArr : incomeArr, colorsArray));
-  }, [title, valueSelectChart, currTimeValue, expenses]);
+    setData(
+      buildPieData(title === "expense" ? expenseArr : incomeArr, CHART_SERIES, {
+        otherColor: CHART_OTHER_COLOR,
+        otherLabel,
+      })
+    );
+  }, [title, valueSelectChart, currTimeValue, expenses, otherLabel]);
 
   return { data, total, currTimeLabel, currTimeValue, setCurrTimeValue };
 }

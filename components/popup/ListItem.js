@@ -1,85 +1,105 @@
-import React from "react";
-import {
-  FlatList,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-  Text,
-} from "react-native";
+import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+
+import CategoryAvatar from "../ui/CategoryAvatar";
+import EmptyState from "../ui/EmptyState";
 import { GlobalStyles } from "../../constants/styles";
 import { ExpenseStore } from "../../store/context";
+import { useLanguage } from "../../store/languageContext";
 
-const ListItem = ({ items, name, setIsPopup }) => {
+const { colors, spacing, radius, type } = GlobalStyles;
+
+// Tile grid of categories / accounts. Icon + label on each tile so the user
+// recognises the option instead of reading a list of bare names (Nielsen #6),
+// and the current choice is outlined rather than only tinted.
+const ListItem = ({ items, name, setIsPopup, selected }) => {
   const { setValueInputCategory, setValueInputAccount } = ExpenseStore();
-  const handleAddItem = (e) => {
-    if (name === "category") {
-      setValueInputCategory(e);
-      setIsPopup(false);
-    } else {
-      setValueInputAccount(e);
-      setIsPopup(false);
-    }
+  const { t } = useLanguage();
+
+  const handleSelect = (value) => {
+    if (name === "category") setValueInputCategory(value);
+    else setValueInputAccount(value);
+    setIsPopup(false);
   };
 
-  const handleRender = (item) => {
+  const renderItem = ({ item }) => {
+    const active = selected === item.name;
     return (
-      <View style={styles.container}>
-        <Pressable
-          onPress={handleAddItem.bind(null, item.name)}
-          style={({ pressed }) => pressed && styles.pressed}
+      <Pressable
+        onPress={() => handleSelect(item.name)}
+        accessibilityRole="button"
+        accessibilityState={{ selected: active }}
+        style={({ pressed }) => [
+          styles.tile,
+          active && styles.tileActive,
+          pressed && styles.pressed,
+        ]}
+      >
+        <CategoryAvatar name={item.name} icon={item.icon} size={38} />
+        <Text
+          style={[styles.name, active && styles.nameActive]}
+          numberOfLines={2}
         >
-          <View style={styles.wrapItem}>
-            <Text style={styles.name}>{item.name}</Text>
-          </View>
-        </Pressable>
-      </View>
+          {item.name}
+        </Text>
+      </Pressable>
     );
   };
+
   return (
-    <View style={{ marginHorizontal: 24, marginBottom: 50 }}>
-      <FlatList
-        data={items}
-        renderItem={({ item }) => handleRender(item)}
-        keyExtractor={(item) => item.id}
-        // horizontal={true}
-        numColumns={2}
-      ></FlatList>
-    </View>
+    <FlatList
+      data={items}
+      renderItem={renderItem}
+      keyExtractor={(item) => String(item.id)}
+      numColumns={3}
+      columnWrapperStyle={styles.column}
+      contentContainerStyle={styles.content}
+      ListEmptyComponent={<EmptyState title={t("no_items_yet")} icon="folder-open-outline" />}
+      showsVerticalScrollIndicator={false}
+    />
   );
 };
 
 export default ListItem;
 
 const styles = StyleSheet.create({
-  pressed: {
-    opacity: 0.5,
+  content: {
+    paddingHorizontal: spacing[4],
+    paddingTop: spacing[3],
+    paddingBottom: spacing[6],
+    gap: spacing[2],
   },
-  container: {
-    // flex: 1,
-    width: "48%",
-    margin: 4,
-    // height: 150,
-    borderRadius: 8,
-    elevation: 4,
-    backgroundColor: "white",
-    shadowColor: "black",
-    shadowOpacity: 0.25,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 8,
-    overflow: Platform.OS === "android" ? "hidden" : "visible",
+  column: {
+    gap: spacing[2],
+  },
+  tile: {
+    flex: 1,
+    minHeight: 92,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing[1] + 2,
+    paddingVertical: spacing[3],
+    paddingHorizontal: spacing[1] + 2,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  tileActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primarySurface,
   },
   name: {
-    fontWeight: "400",
-    fontSize: 16,
-    color: GlobalStyles.colors.gray500,
+    ...type.caption,
+    fontSize: 12,
+    fontWeight: "500",
+    color: colors.textBody,
+    textAlign: "center",
   },
-  wrapItem: {
-    // flex: 1,
-    paddingVertical: 16,
-    paddingHorizontal: 6,
-    justifyContent: "center",
-    borderRadius: 8,
-    alignItems: "center",
+  nameActive: {
+    color: colors.primary,
+    fontWeight: "600",
+  },
+  pressed: {
+    opacity: 0.7,
   },
 });

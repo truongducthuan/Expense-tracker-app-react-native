@@ -11,7 +11,7 @@
     "splash": {
       "image": "./assets/pig.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#F0FDFA"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -34,7 +34,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/pig.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#F0FDFA"
       },
       "package": "com.thuanthien.expensestrackerapp",
       "versionCode": 1

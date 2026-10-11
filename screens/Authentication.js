@@ -33,15 +33,11 @@ const Authentication = () => {
     onError: () => setErrorMessage(t("google_signin_failed")),
   });
 
+  // The auth screen carries its own branding, so the native header is hidden
+  // rather than repeating the title above it.
   useLayoutEffect(() => {
-    navigation.setOptions({
-      title: isLogin ? t("login") : t("sign_up"),
-      headerTitleAlign: "center",
-      headerStyle: { backgroundColor: "#2d0689" },
-      headerTintColor: "#fff",
-      headerShadowVisible: false,
-    });
-  }, [navigation, isLogin, t]);
+    navigation.setOptions({ headerShown: false });
+  }, [navigation]);
 
   const handleChangeField = (name, value) =>
     setValues((prev) => ({ ...prev, [name]: value }));

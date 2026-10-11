@@ -3,6 +3,8 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { GlobalStyles } from "../../constants/styles";
 import { useLanguage } from "../../store/languageContext";
 
+const { colors, spacing, radius } = GlobalStyles;
+
 const OPTIONS = [
   { code: "vi", label: "VI" },
   { code: "en", label: "EN" },
@@ -12,6 +14,7 @@ const OPTIONS = [
 // it works from any screen without props.
 const LanguageSwitch = ({ style }) => {
   const { lang, setLang } = useLanguage();
+
   return (
     <View style={[styles.container, style]}>
       {OPTIONS.map(({ code, label }) => {
@@ -20,6 +23,8 @@ const LanguageSwitch = ({ style }) => {
           <Pressable
             key={code}
             onPress={() => setLang(code)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: active }}
             style={({ pressed }) => [
               styles.option,
               active && styles.optionActive,
@@ -41,27 +46,32 @@ export default LanguageSwitch;
 const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
-    backgroundColor: GlobalStyles.colors.primary50,
-    borderRadius: 999,
+    backgroundColor: colors.surface,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
     padding: 3,
+    gap: 2,
   },
   option: {
-    paddingVertical: 4,
-    paddingHorizontal: 12,
-    borderRadius: 999,
+    minWidth: 40,
+    paddingVertical: spacing[1] + 2,
+    paddingHorizontal: spacing[3],
+    borderRadius: radius.full,
+    alignItems: "center",
   },
   optionActive: {
-    backgroundColor: GlobalStyles.colors.primary500,
+    backgroundColor: colors.primary,
   },
   text: {
-    fontSize: 13,
-    color: GlobalStyles.colors.primary500,
-    fontWeight: "600",
+    fontSize: 12.5,
+    color: colors.textMuted,
+    fontWeight: "700",
   },
   textActive: {
-    color: "#fff",
+    color: colors.onPrimary,
   },
   pressed: {
-    opacity: 0.6,
+    opacity: 0.7,
   },
 });

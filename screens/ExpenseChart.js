@@ -1,33 +1,36 @@
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  RefreshControl,
   ActivityIndicator,
+  Dimensions,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
-import { VictoryPie, VictoryTheme, VictoryLabel } from "victory-native";
+import { VictoryPie, VictoryLabel } from "victory-native";
 import { Line } from "react-native-svg";
 
 import { ExpenseStore } from "../store/context";
 import { AuthStore } from "../store/authContext";
 import { useLanguage } from "../store/languageContext";
 import { GlobalStyles } from "../constants/styles";
+import { CATEGORY_TYPE } from "../constants/config";
 import useRefresh from "../hooks/useRefresh";
 import useExpenseChartData from "../hooks/useExpenseChartData";
-import NavItem from "../components/ui/NavItem";
 import ListChar from "../components/expenses/ListChar";
 import HeaderTime from "../components/ui/HeaderTime";
 import TotalTypeIncome from "../components/charts/TotalTypeIncome";
+import Card from "../components/ui/Card";
+import EmptyState from "../components/ui/EmptyState";
+import useMoney from "../hooks/useMoney";
+
+const { colors, spacing, radius, type } = GlobalStyles;
 
 // Slices below this percentage hide their label and leader line (still shown in
 // the legend below) to avoid unreadable overlap between thin adjacent slices.
-const LABEL_THRESHOLD = 3;
-
-// Type colors for the Expense/Income toggle: resting vs. bolder (active) shade.
-const EXPENSE_COLOR = { base: "#e53935", active: "#b71c1c" };
-const INCOME_COLOR = { base: "#2e9e0a", active: "#1b5e20" };
+const LABEL_THRESHOLD = 4;
 
 // Leader line connecting a slice to its label. VictoryPie's built-in indicator
 // renders a web <line> that crashes on React Native, so we draw it with
@@ -35,7 +38,42 @@ const INCOME_COLOR = { base: "#2e9e0a", active: "#1b5e20" };
 // `index`/`data` let us skip the line for slices under the threshold.
 const LabelLine = ({ x1, y1, x2, y2, index, data, threshold }) => {
   if (data?.[index] && data[index].y < threshold) return null;
-  return <Line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#9a9a9a" strokeWidth={1} />;
+  return (
+    <Line x1={x1} y1={y1} x2={x2} y2={y2} stroke={colors.border} strokeWidth={1} />
+  );
+};
+
+// Expense/income toggle rendered as two summary cards rather than coloured
+// buttons: each one states its own total, so the figure you are about to chart
+// is visible before you switch to it.
+const TotalToggle = ({ label, amount, active, color, surface, onPress }) => {
+  const { money } = useMoney();
+
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="tab"
+      accessibilityState={{ selected: active }}
+      style={({ pressed }) => [
+        styles.toggle,
+        active && {
+          borderColor: color,
+          backgroundColor: surface,
+          borderWidth: 2,
+        },
+        pressed && styles.pressed,
+      ]}
+    >
+      <Text style={styles.toggleLabel}>{label}</Text>
+      <Text
+        style={[styles.toggleAmount, active && { color }]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+      >
+        {money(amount)}
+      </Text>
+    </Pressable>
+  );
 };
 
 function ExpenseChart({ navigation }) {
@@ -43,11 +81,12 @@ function ExpenseChart({ navigation }) {
     ExpenseStore();
   const { user } = AuthStore();
   const { t } = useLanguage();
-  const [title, setTitle] = useState("expense");
+  const { money } = useMoney();
+  const [title, setTitle] = useState(CATEGORY_TYPE.EXPENSE);
   const [loading, setLoading] = useState(false);
 
   const { data, total, currTimeLabel, currTimeValue, setCurrTimeValue } =
-    useExpenseChartData(title);
+    useExpenseChartData(title, t("other"));
 
   useEffect(() => {
     setLoading(true);
@@ -77,95 +116,143 @@ function ExpenseChart({ navigation }) {
     navigation.navigate("AnnualYear");
   }
 
+  // Keep the donut inside the screen on small devices.
+  const chartSize = Math.min(Dimensions.get("window").width - spacing[4] * 2, 340);
+  const periodTotal = title === CATEGORY_TYPE.EXPENSE ? total.expense : total.income;
+
+  const accessibleSummary = useMemo(
+    () =>
+      data.length
+        ? `${t("spending_by_category")}: ${data
+            .map((slice) => `${slice.x} ${slice.pct}%`)
+            .join(", ")}`
+        : undefined,
+    [data, t]
+  );
+
+  // Identity of the current slice set, so the chart remounts on any real change.
+  const chartSignature = useMemo(
+    () => `${title}-${data.map((s) => `${s.key}:${s.total}`).join("|")}`,
+    [title, data]
+  );
+
   return (
     <ScrollView
+      style={styles.screen}
+      contentContainerStyle={styles.content}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
+          tintColor={colors.primary}
+          colors={[colors.primary]}
+        />
       }
     >
+      <View style={styles.toggleRow}>
+        <TotalToggle
+          label={t("total_expense")}
+          amount={total.expense}
+          active={title === CATEGORY_TYPE.EXPENSE}
+          color={colors.expenseText}
+          surface={colors.expenseSurface}
+          onPress={() => setTitle(CATEGORY_TYPE.EXPENSE)}
+        />
+        <TotalToggle
+          label={t("total_income")}
+          amount={total.income}
+          active={title === CATEGORY_TYPE.IMCOME}
+          color={colors.incomeText}
+          surface={colors.incomeSurface}
+          onPress={() => setTitle(CATEGORY_TYPE.IMCOME)}
+        />
+      </View>
+
+      {/* Account balances are a running total across all accounts, so they do
+          not depend on the selected period. A month with no income still has
+          a balance worth seeing — only the category breakdown below can be
+          genuinely empty. */}
+      {title === CATEGORY_TYPE.IMCOME && <TotalTypeIncome />}
+
       {loading ? (
         <View style={styles.loading}>
-          <ActivityIndicator
-            size="large"
-            color={GlobalStyles.colors.primary500}
-          />
-        </View>
-      ) : data.length === 0 ? (
-        <View style={styles.empty}>
-          <Text style={styles.emptyText}>{t("no_expense")}</Text>
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : (
-        <>
-          <View style={styles.nav}>
-            <View style={styles.navCol}>
-              <NavItem
-                onPress={setTitle}
-                isNav={title === "expense"}
-                style={styles.horizon}
-                total={total.expense}
-                color={EXPENSE_COLOR.base}
-                activeColor={EXPENSE_COLOR.active}
-                isLabel={false}
-              >
-                Expense
-              </NavItem>
-              <Text style={styles.navLabel}>{t("total_expense")}</Text>
-            </View>
-            <View style={styles.navCol}>
-              <NavItem
-                onPress={setTitle}
-                isNav={title === "income"}
-                style={styles.horizon}
-                total={total.income}
-                color={INCOME_COLOR.base}
-                activeColor={INCOME_COLOR.active}
-                isLabel={false}
-              >
-                Income
-              </NavItem>
-              <Text style={styles.navLabel}>{t("total_income")}</Text>
-            </View>
+        <Card style={styles.chartCard}>
+          <View style={styles.chartHead}>
+            <Text style={styles.chartTitle}>{t("spending_by_category")}</Text>
+            <Text style={styles.chartTotal}>{money(periodTotal)}</Text>
           </View>
-          {title === "income" && <TotalTypeIncome />}
 
-          <View style={styles.chart}>
-            <VictoryPie
-              key={data}
-              data={data}
-              x={"x"}
-              y={"y"}
-              width={360}
-              height={360}
-              padding={{ top: 30, bottom: 30, left: 75, right: 75 }}
-              colorScale={data.map((slice) => slice.color)}
-              animate={{ duration: 2000 }}
-              theme={VictoryTheme.material}
-              sortKey="y"
-              sortOrder="descending"
-              labelPosition="centroid"
-              labelRadius={({ radius }) => radius + 22}
-              labelIndicator={
-                <LabelLine data={data} threshold={LABEL_THRESHOLD} />
-              }
-              labelIndicatorInnerOffset={8}
-              labelIndicatorOuterOffset={4}
-              labels={({ datum }) =>
-                datum.y >= LABEL_THRESHOLD
-                  ? `${datum.x} ${Math.round(datum.y)}%`
-                  : null
-              }
-              labelComponent={
-                <VictoryLabel style={{ fill: "#000", fontSize: 8 }} />
-              }
+          {data.length === 0 ? (
+            // Empty state stays inside the card, so it reads as "this section
+            // has nothing for this period" rather than the screen being broken.
+            <EmptyState
+              icon="pie-chart-outline"
+              title={t("no_chart_data")}
+              message={t("no_chart_data_hint")}
+              actionLabel={t("add_expense")}
+              onAction={() => navigation.navigate("ManageExpense")}
+              style={styles.emptyInCard}
             />
-          </View>
+          ) : (
+            <>
+              <View
+                style={styles.chartWrap}
+                accessible
+                accessibilityRole="image"
+                accessibilityLabel={accessibleSummary}
+              >
+                <VictoryPie
+                  // Remount whenever the slices actually change. Victory's
+                  // `animate` interpolates between old and new datums and can
+                  // leave labels holding stale values, which is how the donut
+                  // and the legend drifted apart; animation is off and the key
+                  // covers the data itself, not just its length.
+                  key={chartSignature}
+                  data={data}
+                  x="x"
+                  y="y"
+                  width={chartSize}
+                  height={chartSize}
+                  padding={{ top: 28, bottom: 28, left: 64, right: 64 }}
+                  innerRadius={chartSize * 0.17}
+                  padAngle={1}
+                  colorScale={data.map((slice) => slice.color)}
+                  labelPosition="centroid"
+                  labelRadius={({ radius }) => radius + 20}
+                  labelIndicator={
+                    <LabelLine data={data} threshold={LABEL_THRESHOLD} />
+                  }
+                  labelIndicatorInnerOffset={8}
+                  labelIndicatorOuterOffset={4}
+                  // `pct` is the same integer the legend prints — never rounded
+                  // a second time here.
+                  labels={({ datum }) =>
+                    datum.y >= LABEL_THRESHOLD ? `${datum.pct}%` : null
+                  }
+                  labelComponent={
+                    <VictoryLabel
+                      style={{
+                        fill: colors.textBody,
+                        fontSize: 11,
+                        fontWeight: "600",
+                      }}
+                    />
+                  }
+                  style={{ data: { stroke: colors.surface, strokeWidth: 2 } }}
+                />
+              </View>
 
-          <View>
-            {data.map((item) => (
-              <ListChar item={item} key={item.x} />
-            ))}
-          </View>
-        </>
+              <View style={styles.legend}>
+                {data.map((item) => (
+                  <ListChar item={item} key={item.key} />
+                ))}
+              </View>
+            </>
+          )}
+        </Card>
       )}
     </ScrollView>
   );
@@ -174,44 +261,77 @@ function ExpenseChart({ navigation }) {
 export default ExpenseChart;
 
 const styles = StyleSheet.create({
-  chart: {
+  screen: {
     flex: 1,
-    alignItems: "center",
-    width: "100%",
-    height: 380,
+    backgroundColor: colors.screen,
   },
-  nav: {
+  content: {
+    padding: spacing[4],
+    paddingBottom: spacing[6],
+    gap: spacing[4],
+  },
+  toggleRow: {
     flexDirection: "row",
+    gap: spacing[3],
+  },
+  toggle: {
+    flex: 1,
+    gap: 2,
+    paddingVertical: spacing[3],
+    paddingHorizontal: spacing[3],
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  toggleLabel: {
+    ...type.label,
+    color: colors.textMuted,
+  },
+  toggleAmount: {
+    ...type.h3,
+    fontWeight: "700",
+    color: colors.textBody,
+  },
+  chartCard: {
+    paddingBottom: spacing[2],
+  },
+  chartHead: {
+    flexDirection: "row",
+    alignItems: "baseline",
     justifyContent: "space-between",
-    paddingHorizontal: 8,
-    paddingTop: 8,
+    gap: spacing[2],
   },
-  navCol: {
-    alignItems: "center",
-    gap: 4,
+  chartTitle: {
+    ...type.h3,
+    color: colors.text,
   },
-  navLabel: {
-    fontSize: 12,
-    color: "#666",
-    textAlign: "center",
+  chartTotal: {
+    ...type.bodyEmphasis,
+    fontWeight: "700",
+    color: colors.textBody,
   },
-  horizon: {
-    paddingHorizontal: 40,
-    paddingVertical: 4,
-    textAlign: "center",
-  },
-  empty: {
+  chartWrap: {
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 80,
+    marginTop: spacing[1],
   },
-  emptyText: {
-    fontSize: 16,
-    color: "#666",
+  legend: {
+    borderTopWidth: 1,
+    borderTopColor: colors.n100,
+    paddingTop: spacing[2],
+  },
+  // Tighter than the standalone empty state: it sits inside the card now.
+  emptyInCard: {
+    paddingVertical: spacing[5],
+    paddingHorizontal: 0,
   },
   loading: {
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 120,
+    paddingVertical: spacing[6] * 3,
+  },
+  pressed: {
+    opacity: 0.8,
   },
 });

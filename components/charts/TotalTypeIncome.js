@@ -1,114 +1,232 @@
-import { useCallback, useEffect, useState } from "react";
-import { View, Text, StyleSheet, FlatList } from "react-native";
+import { useMemo, useState } from "react";
+import { Pressable, View, Text, StyleSheet } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
-import { formatAmount } from "../../util/format";
-import { AccountStore } from '../../store/accountContext'
+import Card from "../ui/Card";
+import CategoryAvatar from "../ui/CategoryAvatar";
+import { GlobalStyles } from "../../constants/styles";
+import useMoney from "../../hooks/useMoney";
+import { AccountStore } from "../../store/accountContext";
 import { ExpenseStore } from "../../store/context";
-import { removeAccents } from "../../util/tools";
+import { useLanguage } from "../../store/languageContext";
+import { buildAccountBalances } from "../../util/ledger";
+import { fetchAccountDB, restoreAccountDB } from "../../util/database";
 
+const { colors, spacing, radius, type } = GlobalStyles;
+
+// Per-wallet balance list: what each account holds after income, spending and
+// transfers, then the overall remainder.
+//
+// The total is the sum of the rows above it. It used to be computed separately
+// as Σincome − Σexpense, so when a transaction named an account that wasn't in
+// the current list, the rows and the total disagreed.
 const TotalTypeIncome = () => {
   const { expenses } = ExpenseStore();
-  const {accounts} = AccountStore();
-  const [totalType, setTotalType] = useState(accounts);
-  const [amountRemain, setAmountRemain] = useState(0);
+  const { accounts, setAccount } = AccountStore();
+  const { t, lang } = useLanguage();
+  const { balance } = useMoney();
+  const [restoring, setRestoring] = useState(null);
 
-  useEffect(() => {
-    const transfer = expenses.filter(item => item.type === 'transfer');
-    const income = expenses.filter(item => item.type === 'income');
-    const spend = expenses.filter(item => item.type === 'expense');
-
-    // calc the total amount remaining after reduces the amount spent
-    const totalAmountRemain = remainingAmount(income, spend);
-    setAmountRemain(totalAmountRemain);
-
-    // reduces amount follow transfer
-    const transferTypeObject = hashMap(transfer);
-    
-    const updateState = totalType.map((item, index) => {
-      const spendByName = spend.filter(i => removeAccents(i.account) === removeAccents(item.name)); //filter spent follow account
-      const totalAmountSpendByName = calcTotal(spendByName); // get total amount spent follow account name
-      const totalAmount = handleFilter(income, item.name); // get total amount income from account name
-      let amount = totalAmount - totalAmountSpendByName;
-      
-      for(let key in transferTypeObject) {
-        if(key === item.name) {
-          amount += +transferTypeObject[key];
-        }
-      }
-
-      return {...item, amount}
-    })
-
-    setTotalType(updateState);
-  }, [accounts, expenses])
-
-  const remainingAmount = (income, spend) => {
-    return calcTotal(income) - calcTotal(spend)
-  }
-
-  const calcTotal = (data) => {
-    return data.reduce((a, b) => a + +b.amount, 0);
+  // Puts a name used by transactions back into the account list, then re-reads
+  // the list so the row moves up from "unlisted" straight away.
+  const handleRestore = async (name) => {
+    setRestoring(name);
+    try {
+      await restoreAccountDB(name);
+      setAccount(await fetchAccountDB(lang));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setRestoring(null);
+    }
   };
 
-  const handleFilter = (arr, type) => {
-    let amount = 0;
-    arr.filter(i => {
-      if(removeAccents(i.account) == removeAccents(type)) {
-        amount += +i.amount;
-      }
-    });
-    return amount;
-  }
+  const { rows, unlisted, total } = useMemo(
+    () => buildAccountBalances(accounts, expenses, lang),
+    [accounts, expenses, lang]
+  );
 
-  const hashMap = (data) => {
-    let balances = {};
-    for(let value of data) {
-      balances[value.account] = (balances[value.account] || 0) + +value.amount;
-      balances[value.category] = (balances[value.category] || 0) - +value.amount;
-    }
-    return balances;
-  }
-
+  const amountStyle = (value) => [
+    styles.amount,
+    { color: value < 0 ? colors.expenseText : colors.textBody },
+  ];
 
   return (
-    <View style={styles.container}>
-      {totalType.map((item, index) => (
-        <View key={index} style={[styles.item, index % 2 == 0 ? styles.even : styles.odd]}>
-          <Text>{item.name}:</Text>
-          <Text>$ {formatAmount(item.amount)}</Text>
+    <Card style={styles.card} padded={false}>
+      <Text style={styles.heading}>{t("balance")}</Text>
+
+      {rows.map((item, index) => (
+        <View
+          key={item.id ?? item.name}
+          style={[styles.row, index > 0 && styles.rowDivided]}
+        >
+          <CategoryAvatar name={item.name} icon={item.icon} size={32} />
+          <Text style={styles.name} numberOfLines={1}>
+            {item.name}
+          </Text>
+          <Text style={amountStyle(item.amount)} numberOfLines={1}>
+            {balance(item.amount)}
+          </Text>
         </View>
       ))}
-      <View style={styles.item}>
-          <Text>Total:</Text>
-          <Text>$ {formatAmount(amountRemain)}</Text>
+
+      {/* Account names used by transactions that the list no longer contains —
+          either a wallet recorded in the other language, or one that was
+          deleted while its transactions kept referencing it by name. Shown
+          rather than dropped, so the rows always account for the total, and
+          each one can be put back without retyping it. */}
+      {unlisted.length > 0 && (
+        <View style={styles.unlistedBlock}>
+          <Text style={styles.unlistedHeading}>{t("unlisted_accounts")}</Text>
+
+          {unlisted.map((entry) => (
+            <View key={entry.label} style={styles.row}>
+              <View style={styles.unlistedIcon}>
+                <Ionicons
+                  name="help-circle-outline"
+                  size={18}
+                  color={colors.textMuted}
+                />
+              </View>
+              <Text style={styles.name} numberOfLines={1}>
+                {entry.label}
+              </Text>
+              <Text style={amountStyle(entry.amount)} numberOfLines={1}>
+                {balance(entry.amount)}
+              </Text>
+              <Pressable
+                onPress={() => handleRestore(entry.label)}
+                disabled={restoring === entry.label}
+                accessibilityRole="button"
+                accessibilityLabel={`${t("restore_account")} ${entry.label}`}
+                style={({ pressed }) => [
+                  styles.restoreButton,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Ionicons name="add" size={15} color={colors.primary} />
+                <Text style={styles.restoreLabel}>{t("restore_account")}</Text>
+              </Pressable>
+            </View>
+          ))}
+
+          <Text style={styles.unlistedHint}>{t("unlisted_accounts_hint")}</Text>
         </View>
-    </View>
+      )}
+
+      <View style={styles.totalRow}>
+        <Text style={styles.totalLabel}>{t("total")}</Text>
+        <Text
+          style={[
+            styles.totalAmount,
+            { color: total < 0 ? colors.expenseText : colors.primary },
+          ]}
+          numberOfLines={1}
+        >
+          {balance(total)}
+        </Text>
+      </View>
+    </Card>
   );
 };
 
 export default TotalTypeIncome;
 
 const styles = StyleSheet.create({
-  container: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    display: 'flex',
-    flexDirection: 'column',
+  card: {
+    paddingTop: spacing[4],
   },
-  item: {
-    display: 'flex',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingVertical: 5,
-    paddingHorizontal: 5,
-    borderRadius: 8
+  heading: {
+    ...type.label,
+    color: colors.textMuted,
+    paddingHorizontal: spacing[4],
+    marginBottom: spacing[2],
   },
-  odd: {
-    backgroundColor: '#dce5ee',
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[3],
+    minHeight: 52,
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[2],
   },
-  even: {
-    backgroundColor: '#ccced2',
+  rowDivided: {
+    borderTopWidth: 1,
+    borderTopColor: colors.n100,
   },
-})
+  name: {
+    ...type.body,
+    color: colors.text,
+    flex: 1,
+    minWidth: 0,
+  },
+  amount: {
+    ...type.bodyEmphasis,
+    fontWeight: "600",
+  },
+  unlistedIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceAlt,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  unlistedBlock: {
+    borderTopWidth: 1,
+    borderTopColor: colors.n100,
+    paddingTop: spacing[2],
+    backgroundColor: colors.surfaceAlt,
+  },
+  unlistedHeading: {
+    ...type.label,
+    fontSize: 10,
+    color: colors.textMuted,
+    paddingHorizontal: spacing[4],
+    marginBottom: spacing[1],
+  },
+  unlistedHint: {
+    ...type.caption,
+    fontSize: 11.5,
+    color: colors.textMuted,
+    paddingHorizontal: spacing[4],
+    paddingBottom: spacing[3],
+  },
+  restoreButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+    minHeight: 32,
+    paddingHorizontal: spacing[2],
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  restoreLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: colors.primary,
+  },
+  pressed: {
+    opacity: 0.6,
+  },
+  totalRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing[3],
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[3],
+    backgroundColor: colors.primarySurface,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  totalLabel: {
+    ...type.label,
+    color: colors.primary,
+  },
+  totalAmount: {
+    ...type.h3,
+    fontWeight: "700",
+  },
+});

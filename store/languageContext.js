@@ -30,7 +30,17 @@ const LanguageProvider = ({ children }) => {
 
   // t("some_key") returns the localized string, falling back to the key if
   // missing so a missing translation is visible rather than rendering blank.
-  const t = (key) => translations[lang]?.[key] ?? key;
+  //
+  // An optional second argument fills {placeholders}:
+  //   t("budget_over", { amount: "120K" }) -> "Vượt 120K. Muốn điều chỉnh…"
+  // Values are substituted as given, so callers format money/dates first.
+  const t = (key, values) => {
+    const str = translations[lang]?.[key] ?? key;
+    if (!values) return str;
+    return str.replace(/\{(\w+)\}/g, (match, name) =>
+      values[name] === undefined ? match : String(values[name])
+    );
+  };
 
   return (
     <LanguageContext.Provider value={{ lang, setLang, t }}>

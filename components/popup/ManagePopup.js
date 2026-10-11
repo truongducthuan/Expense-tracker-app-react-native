@@ -1,60 +1,71 @@
-import React, { useLayoutEffect, useState } from "react";
-import { FlatList, StyleSheet, View } from "react-native";
+import { useMemo } from "react";
+import { Pressable, StyleSheet, View } from "react-native";
+
 import HeaderPopup from "../ui/HeaderPopup";
 import ListItem from "./ListItem";
+import { GlobalStyles } from "../../constants/styles";
+import { CATEGORY_TYPE } from "../../constants/config";
 import { CategoryStore } from "../../store/categoryContext";
 import { AccountStore } from "../../store/accountContext";
 import { CategoryIncomeStore } from "../../store/incomeCategory";
+import { ExpenseStore } from "../../store/context";
 
+const { colors, radius } = GlobalStyles;
+
+// Bottom sheet for picking a category or account. Tapping the dimmed backdrop
+// closes it, so there is always a way out without hunting for the ✕
+// (Nielsen #3 — user control and freedom).
 const ManagePopup = ({ setIsPopup, name, titleName }) => {
   const { categories } = CategoryStore();
   const { accounts } = AccountStore();
   const { categoriesIncome } = CategoryIncomeStore();
+  const { valueInputCategory, valueInputAccount } = ExpenseStore();
 
-  const [items, setItems] = useState([]);
+  const items = useMemo(() => {
+    if (name !== "category") return accounts;
+    if (titleName === CATEGORY_TYPE.EXPENSE) return categories;
+    if (titleName === CATEGORY_TYPE.IMCOME) return categoriesIncome;
+    return accounts;
+  }, [name, titleName, categories, categoriesIncome, accounts]);
 
-  useLayoutEffect(() => {
-    const fetchItem = () => {
-      if (titleName === "expense") {
-        if (name === "category") {
-          setItems(categories);
-        } else {
-          setItems(accounts);
-        }
-      } else if (titleName === "income") {
-        if (name === "category") {
-          setItems(categoriesIncome);
-        } else {
-          setItems(accounts);
-        }
-      } else {
-        setItems(accounts);
-      }
-    };
-    fetchItem();
-  }, [titleName, name]);
-
-  if (setItems.length) {
-    return (
-      <View style={styles.container}>
-        <HeaderPopup
+  return (
+    <View style={styles.overlay}>
+      <Pressable
+        style={styles.backdrop}
+        onPress={() => setIsPopup(false)}
+        accessibilityRole="button"
+      />
+      <View style={styles.sheet}>
+        <HeaderPopup name={name} icon="create-outline" setIsPopup={setIsPopup} />
+        <ListItem
+          items={items || []}
           name={name}
-          icon={"create"}
-          size={22}
-          color={"white"}
           setIsPopup={setIsPopup}
+          selected={name === "category" ? valueInputCategory : valueInputAccount}
         />
-        <ListItem items={items} name={name} setIsPopup={setIsPopup} />
       </View>
-    );
-  }
+    </View>
+  );
 };
 
 export default ManagePopup;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    height: "50%",
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "flex-end",
+    zIndex: 100,
+    elevation: 100,
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(17,24,39,0.45)",
+  },
+  sheet: {
+    maxHeight: "72%",
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.lg + 4,
+    borderTopRightRadius: radius.lg + 4,
+    ...GlobalStyles.shadow.lg,
   },
 });

@@ -1,12 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
-import ExpenseSummary from "../components/expenses/ExpenseSummary";
-import { ExpenseStore } from "../store/context";
-import ListAnnualYear from "../components/expenses/ListAnnualYear";
-import { GlobalStyles } from "../constants/styles";
 
-const AnualYear = () => {
+import ExpenseSummary from "../components/expenses/ExpenseSummary";
+import ListAnnualYear from "../components/expenses/ListAnnualYear";
+import EmptyState from "../components/ui/EmptyState";
+import { ExpenseStore } from "../store/context";
+import { GlobalStyles } from "../constants/styles";
+import { useLanguage } from "../store/languageContext";
+
+const { colors, spacing } = GlobalStyles;
+
+const AnualYear = ({ navigation }) => {
   const { expenses } = ExpenseStore();
+  const { t } = useLanguage();
 
   const [data, setDate] = useState([]);
 
@@ -39,35 +45,42 @@ const AnualYear = () => {
           type: "income",
         });
       }
-      setDate((state) => {
+      setDate(() => {
         return [...expenseArray, ...incomeArray];
       });
     };
     handleLogic();
   }, [expenses]);
 
-  let content;
-  if (data.length) {
+  const grouped = useMemo(() => {
+    if (!data.length) return [];
     const object = {};
     for (const item of data) {
       if (!Array.isArray(object[item.year])) object[item.year] = [];
       object[item.year].push(item);
     }
-    const newData = [];
-    for (let key in object) {
-      newData.push({
-        year: key,
-        value: object[key],
-      });
-    }
-    content = <ListAnnualYear data={newData.reverse()} />;
-  }
+    return Object.keys(object)
+      .map((year) => ({ year, value: object[year] }))
+      .reverse();
+  }, [data]);
+
   return (
     <View style={styles.container}>
-      <View style={styles.title}>
-        <ExpenseSummary expenses={expenses} />
+      <ExpenseSummary expenses={expenses} scopeKey="all_time" />
+
+      <View style={styles.list}>
+        {grouped.length ? (
+          <ListAnnualYear data={grouped} />
+        ) : (
+          <EmptyState
+            icon="stats-chart-outline"
+            title={t("no_chart_data")}
+            message={t("no_chart_data_hint")}
+            actionLabel={t("add_expense")}
+            onAction={() => navigation.navigate("ManageExpense")}
+          />
+        )}
       </View>
-      <View>{content}</View>
     </View>
   );
 };
@@ -77,10 +90,12 @@ export default AnualYear;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 24,
-    backgroundColor: GlobalStyles.colors.primary700,
+    paddingHorizontal: spacing[4],
+    paddingTop: spacing[4],
+    backgroundColor: colors.screen,
   },
-  title: {
-    marginVertical: 10,
+  list: {
+    flex: 1,
+    marginTop: spacing[4],
   },
 });
