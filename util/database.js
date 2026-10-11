@@ -4,6 +4,7 @@ import {
   ACCOUNTS,
   EXPENSE_CATEGORIES,
   INCOME_CATEGORIES,
+  translateAccountName,
 } from "../constants/seedNames";
 
 const categoryExpenseDB = SQLite.openDatabase("categories_expense.db");
@@ -68,19 +69,57 @@ const ensureLangColumn = (db, table) =>
 const ensureIconColumn = (db, table) =>
   execute(db, `ALTER TABLE ${table} ADD COLUMN icon TEXT`).catch(() => {});
 
-// Recovers rows the user created before ALL_LANGS existed: anything whose name
-// is not one of the seeded defaults was typed by the user, so it is promoted to
-// "every language" and becomes visible again. Idempotent and non-destructive —
-// it only ever rewrites the `lang` tag, never names, icons or ids.
-const promoteUserRows = (db, table, seedsByLang) => {
+// Adds the `position` column used for the user's own ordering.
+const ensurePositionColumn = (db, table) =>
+  execute(db, `ALTER TABLE ${table} ADD COLUMN position INTEGER`).catch(() => {});
+
+// Gives rows that have never been ordered a position matching the order they
+// are already displayed in, so turning the feature on does not shuffle anyone's
+// list. Rows were shown oldest-first, which is `id` ascending.
+const backfillPositions = (db, table) =>
+  execute(
+    db,
+    `UPDATE ${table} SET position = id WHERE position IS NULL`
+  ).catch((err) => console.error("position backfill failed:", err));
+
+// Keeps the `lang` tag of every row consistent with what the row actually is.
+// Runs on every start, in both directions, so the table is self-healing:
+//
+//   • a SEEDED default is forced back to its own language. An earlier build
+//     wrongly offered "add back" on defaults, which tagged them ALL_LANGS and
+//     made the list show both "Cash" and "Tiền mặt" — two labels for one
+//     wallet. Preventing the button does not undo rows already tagged, so this
+//     repairs them.
+//   • anything NOT seeded was typed by the user, has no translation, and is
+//     tagged ALL_LANGS so it shows whichever language is being read.
+//
+// Idempotent and non-destructive: only the `lang` column is ever written.
+const reconcileLangTags = (db, table, seedsByLang) => {
   const seeded = Object.values(seedsByLang).flat();
-  const placeholders = seeded.map(() => "?").join(", ");
-  return execute(
+  const allPlaceholders = seeded.map(() => "?").join(", ");
+
+  // Defaults -> their own language.
+  const perLanguage = Object.entries(seedsByLang).map(([lang, names]) => {
+    const placeholders = names.map(() => "?").join(", ");
+    return execute(
+      db,
+      `UPDATE ${table} SET lang = ?
+       WHERE lang <> ? AND name IN (${placeholders})`,
+      [lang, lang, ...names]
+    );
+  });
+
+  // User-created rows -> every language.
+  const userRows = execute(
     db,
     `UPDATE ${table} SET lang = ?
-     WHERE lang <> ? AND name NOT IN (${placeholders})`,
+     WHERE lang <> ? AND name NOT IN (${allPlaceholders})`,
     [ALL_LANGS, ALL_LANGS, ...seeded]
-  ).catch((err) => console.error(err));
+  );
+
+  return Promise.all([...perLanguage, userRows]).catch((err) =>
+    console.error("lang reconcile failed:", err)
+  );
 };
 
 const seed = (db, table, names, lang) => {
@@ -103,14 +142,17 @@ const createNamedTable = (db, table, seedsByLang) =>
   )
     .then(() => ensureLangColumn(db, table))
     .then(() => ensureIconColumn(db, table))
-    .then(() => promoteUserRows(db, table, seedsByLang))
+    .then(() => ensurePositionColumn(db, table))
+    .then(() => reconcileLangTags(db, table, seedsByLang))
     .then(() =>
       Promise.all(
         Object.entries(seedsByLang).map(([lang, names]) =>
           seed(db, table, names, lang).catch((err) => console.error(err))
         )
       )
-    );
+    )
+    // Freshly seeded rows arrive without one.
+    .then(() => backfillPositions(db, table));
 
 export const initCategoryExpense = () =>
   createNamedTable(categoryExpenseDB, "categories_expense", EXPENSE_CATEGORIES);
@@ -119,7 +161,7 @@ export const fetchCategoriesExpenseDB = (lang = "en") =>
   dbReady.then(() =>
   execute(
     categoryExpenseDB,
-    "SELECT * FROM categories_expense WHERE lang IN (?, ?) ORDER BY id DESC",
+    "SELECT * FROM categories_expense WHERE lang IN (?, ?) ORDER BY position ASC, id ASC",
     [lang, ALL_LANGS]
   ).then(toNamedRows));
 
@@ -128,7 +170,8 @@ export const fetchCategoriesExpenseDB = (lang = "en") =>
 export const addExpenseCategory = (name, lang = "en", icon = null) =>
   execute(
     categoryExpenseDB,
-    "INSERT INTO categories_expense (name, lang, icon) VALUES (?, ?, ?)",
+    `INSERT INTO categories_expense (name, lang, icon, position)
+       VALUES (?, ?, ?, (SELECT IFNULL(MAX(position), 0) + 1 FROM categories_expense))`,
     [name, ALL_LANGS, icon]
   ).then((res) => res.insertId);
 
@@ -149,7 +192,7 @@ export const fetchCategoryIncomeDB = (lang = "en") =>
   dbReady.then(() =>
   execute(
     categoryIncomeDB,
-    "SELECT * FROM categories_income WHERE lang IN (?, ?) ORDER BY id DESC",
+    "SELECT * FROM categories_income WHERE lang IN (?, ?) ORDER BY position ASC, id ASC",
     [lang, ALL_LANGS]
   ).then(toNamedRows));
 
@@ -161,7 +204,8 @@ export const deleteCategoryIncomeDB = (id) =>
 export const addIncomeCategory = (name, lang = "en", icon = null) =>
   execute(
     categoryIncomeDB,
-    "INSERT INTO categories_income (name, lang, icon) VALUES (?, ?, ?)",
+    `INSERT INTO categories_income (name, lang, icon, position)
+       VALUES (?, ?, ?, (SELECT IFNULL(MAX(position), 0) + 1 FROM categories_income))`,
     [name, ALL_LANGS, icon]
   ).then((res) => res.insertId);
 
@@ -179,7 +223,7 @@ export const fetchAccountDB = (lang = "en") =>
   dbReady.then(() =>
     execute(
       accountDB,
-      "SELECT * FROM accounts WHERE lang IN (?, ?) ORDER BY id DESC",
+      "SELECT * FROM accounts WHERE lang IN (?, ?) ORDER BY position ASC, id ASC",
       [lang, ALL_LANGS]
     ).then(toNamedRows)
   );
@@ -196,18 +240,28 @@ export const fetchAccountDB = (lang = "en") =>
 // so a blind insert would fail on the first case.
 export const restoreAccountDB = (name, icon = null) =>
   dbReady
-    .then(() =>
-      execute(accountDB, "UPDATE accounts SET lang = ? WHERE name = ?", [
+    .then(() => {
+      // A seeded default must never become language-agnostic: it already has a
+      // translation, and tagging it ALL_LANGS is exactly what put both "Cash"
+      // and "Tiền mặt" in the same list. The UI no longer offers it, and this
+      // refuses it outright so no future call can reintroduce the problem.
+      if (translateAccountName(name, "en")) {
+        return Promise.reject(
+          new Error(`"${name}" is a default account and cannot be restored`)
+        );
+      }
+      return execute(accountDB, "UPDATE accounts SET lang = ? WHERE name = ?", [
         ALL_LANGS,
         name,
-      ])
-    )
+      ]);
+    })
     .then((res) =>
       res.rowsAffected > 0
         ? null
         : execute(
             accountDB,
-            "INSERT INTO accounts (name, lang, icon) VALUES (?, ?, ?)",
+            `INSERT INTO accounts (name, lang, icon, position)
+       VALUES (?, ?, ?, (SELECT IFNULL(MAX(position), 0) + 1 FROM accounts))`,
             [name, ALL_LANGS, icon]
           )
     );
@@ -217,7 +271,8 @@ export const deleteAccountDB = (id) =>
 
 // As above: user-created accounts are not language-scoped.
 export const addAccountDB = (name, lang = "en", icon = null) =>
-  execute(accountDB, "INSERT INTO accounts (name, lang, icon) VALUES (?, ?, ?)", [
+  execute(accountDB, `INSERT INTO accounts (name, lang, icon, position)
+       VALUES (?, ?, ?, (SELECT IFNULL(MAX(position), 0) + 1 FROM accounts))`, [
     name,
     ALL_LANGS,
     icon,
@@ -375,6 +430,31 @@ export const depositGoalDB = (id, delta) =>
 export const deleteGoalDB = (id) =>
   execute(goalDB, "DELETE FROM goals WHERE id = (?)", [id]);
 
+
+// ---------------------------------------------------------------------------
+// Ordering
+// ---------------------------------------------------------------------------
+
+// Writes the user's chosen order. `orderedIds` is the list exactly as shown,
+// so every visible row gets a fresh 0..n-1 position and the sequence can never
+// drift or collide.
+const reorderRows = (db, table, orderedIds = []) =>
+  dbReady.then(() =>
+    Promise.all(
+      orderedIds.map((id, index) =>
+        execute(db, `UPDATE ${table} SET position = ? WHERE id = ?`, [index, id])
+      )
+    )
+  );
+
+export const reorderExpenseCategories = (ids) =>
+  reorderRows(categoryExpenseDB, "categories_expense", ids);
+
+export const reorderIncomeCategories = (ids) =>
+  reorderRows(categoryIncomeDB, "categories_income", ids);
+
+export const reorderAccounts = (ids) =>
+  reorderRows(accountDB, "accounts", ids);
 
 // ---------------------------------------------------------------------------
 // Startup

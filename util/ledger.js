@@ -19,12 +19,15 @@ export const buildAccountLedger = (transactions = [], lang) => {
   const canonical = (name) =>
     (lang && translateAccountName(name, lang)) || name;
 
+  // `count` is how many transactions touch the name. An orphaned name can then
+  // say "4 transactions" instead of appearing as an unexplained wallet.
   const apply = (rawName, delta) => {
     const name = canonical(rawName);
     const key = normalizeName(name);
     if (!key) return;
-    const entry = map.get(key) || { label: name, amount: 0 };
+    const entry = map.get(key) || { label: name, amount: 0, count: 0 };
     entry.amount += delta;
+    entry.count += 1;
     map.set(key, entry);
   };
 
@@ -67,13 +70,19 @@ export const buildAccountBalances = (
   const claimed = new Set();
 
   const rows = accounts.map((account) => {
-    const key = normalizeName(account.name);
+    // Canonicalise BOTH sides. The ledger already relabels seeded defaults into
+    // the current language; if the row itself carries the other language's
+    // label the two keys would never meet, and the row would read 0 while its
+    // money sat in `unlisted`.
+    const label = (lang && translateAccountName(account.name, lang)) || account.name;
+    const key = normalizeName(label);
     claimed.add(key);
     return {
       id: account.id,
       name: account.name,
       icon: account.icon || null,
       amount: ledger.get(key)?.amount || 0,
+      count: ledger.get(key)?.count || 0,
     };
   });
 

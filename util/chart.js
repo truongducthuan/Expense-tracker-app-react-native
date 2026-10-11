@@ -1,3 +1,5 @@
+import { normalizeName } from "./tools";
+
 export const calcTotal = (items) => items.reduce((a, b) => a + +b.amount, 0);
 
 // Groups spending by category.
@@ -55,13 +57,23 @@ const withDisplayPercent = (slices) => {
 // past the last slot are folded into one "Other" slice — a 9th hue is never
 // generated, which would break the one-colour-per-identity guarantee.
 export const buildPieData = (items, colors, options = {}) => {
-  const { otherColor = "#9CA3AF", otherLabel = "Other" } = options;
+  const {
+    otherColor = "#9CA3AF",
+    otherLabel = "Other",
+    // Identity for a name: returns the label to display. Defaults to leaving
+    // names exactly as recorded, so callers without a language still work.
+    canonicalize = (name) => name,
+  } = options;
+
   const total = calcTotal(items);
   if (!total) return [];
 
-  const grouped = groupByCategory(items);
-  const sorted = Object.keys(grouped)
-    .map((category) => ({ category, amount: grouped[category] }))
+  const sorted = [...groupByCategory(items, canonicalize).entries()]
+    .map(([key, entry]) => ({
+      key,
+      category: entry.label,
+      amount: entry.amount,
+    }))
     .sort((a, b) => b.amount - a.amount);
 
   const toSlice = (key, label, amount, color) => ({
@@ -75,7 +87,7 @@ export const buildPieData = (items, colors, options = {}) => {
   if (sorted.length <= colors.length) {
     return withDisplayPercent(
       sorted.map((entry, index) =>
-        toSlice(entry.category, entry.category, entry.amount, colors[index])
+        toSlice(entry.key, entry.category, entry.amount, colors[index])
       )
     );
   }
@@ -96,7 +108,7 @@ export const buildPieData = (items, colors, options = {}) => {
   // produced two slices with the same key and the legend silently dropped a row.
   return withDisplayPercent([
     ...kept.map((entry, index) =>
-      toSlice(entry.category, entry.category, entry.amount, colors[index])
+      toSlice(entry.key, entry.category, entry.amount, colors[index])
     ),
     toSlice("__other__", foldLabel, tailTotal, otherColor),
   ]);

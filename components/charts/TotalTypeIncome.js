@@ -11,6 +11,9 @@ import { ExpenseStore } from "../../store/context";
 import { useLanguage } from "../../store/languageContext";
 import { buildAccountBalances } from "../../util/ledger";
 import { fetchAccountDB, restoreAccountDB } from "../../util/database";
+import ReassignSheet from "../popup/ReassignSheet";
+import { findAccountUsage } from "../../util/usage";
+import { patchExpense } from "../../api/http";
 
 const { colors, spacing, radius, type } = GlobalStyles;
 
@@ -21,23 +24,50 @@ const { colors, spacing, radius, type } = GlobalStyles;
 // as Σincome − Σexpense, so when a transaction named an account that wasn't in
 // the current list, the rows and the total disagreed.
 const TotalTypeIncome = () => {
-  const { expenses } = ExpenseStore();
+  const { expenses, updateExpense } = ExpenseStore();
   const { accounts, setAccount } = AccountStore();
   const { t, lang } = useLanguage();
   const { balance } = useMoney();
   const [restoring, setRestoring] = useState(null);
+  const [orphan, setOrphan] = useState(null);
+  const [busy, setBusy] = useState(false);
 
   // Puts a name used by transactions back into the account list, then re-reads
   // the list so the row moves up from "unlisted" straight away.
   const handleRestore = async (name) => {
     setRestoring(name);
+    setBusy(true);
     try {
       await restoreAccountDB(name);
       setAccount(await fetchAccountDB(lang));
+      setOrphan(null);
     } catch (err) {
       console.error(err);
     } finally {
       setRestoring(null);
+      setBusy(false);
+    }
+  };
+
+  // Moves the stranded transactions onto a real wallet. Once none of them name
+  // the deleted wallet any more, the row disappears on its own — which is what
+  // "I deleted it, why is it still here?" is actually asking for.
+  const handleMoveOrphan = async (targetName) => {
+    if (!orphan || !targetName) return;
+
+    setBusy(true);
+    try {
+      for (const hit of findAccountUsage(expenses, orphan.label)) {
+        const patch = {};
+        for (const field of hit.fields) patch[field] = targetName;
+        await patchExpense(hit.id, patch);
+        updateExpense(hit.id, patch);
+      }
+      setOrphan(null);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -80,7 +110,15 @@ const TotalTypeIncome = () => {
           <Text style={styles.unlistedHeading}>{t("unlisted_accounts")}</Text>
 
           {unlisted.map((entry) => (
-            <View key={entry.label} style={styles.row}>
+            <Pressable
+              key={entry.label}
+              onPress={() => setOrphan(entry)}
+              accessibilityRole="button"
+              accessibilityLabel={`${entry.label} — ${t("orphan_row_hint", {
+                count: entry.count,
+              })}`}
+              style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+            >
               <View style={styles.unlistedIcon}>
                 <Ionicons
                   name="help-circle-outline"
@@ -88,29 +126,25 @@ const TotalTypeIncome = () => {
                   color={colors.textMuted}
                 />
               </View>
-              <Text style={styles.name} numberOfLines={1}>
-                {entry.label}
-              </Text>
+              <View style={styles.unlistedText}>
+                <Text style={styles.name} numberOfLines={1}>
+                  {entry.label}
+                </Text>
+                {/* Says why it is still here, which the bare name never did. */}
+                <Text style={styles.unlistedCount} numberOfLines={1}>
+                  {t("orphan_row_hint", { count: entry.count })}
+                </Text>
+              </View>
               <Text style={amountStyle(entry.amount)} numberOfLines={1}>
                 {balance(entry.amount)}
               </Text>
-              <Pressable
-                onPress={() => handleRestore(entry.label)}
-                disabled={restoring === entry.label}
-                accessibilityRole="button"
-                accessibilityLabel={`${t("restore_account")} ${entry.label}`}
-                style={({ pressed }) => [
-                  styles.restoreButton,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <Ionicons name="add" size={15} color={colors.primary} />
-                <Text style={styles.restoreLabel}>{t("restore_account")}</Text>
-              </Pressable>
-            </View>
+              <Ionicons
+                name="chevron-forward"
+                size={16}
+                color={colors.border}
+              />
+            </Pressable>
           ))}
-
-          <Text style={styles.unlistedHint}>{t("unlisted_accounts_hint")}</Text>
         </View>
       )}
 
@@ -126,6 +160,21 @@ const TotalTypeIncome = () => {
           {balance(total)}
         </Text>
       </View>
+      <ReassignSheet
+        visible={!!orphan}
+        itemName={orphan?.label ?? ""}
+        usageCount={orphan?.count ?? 0}
+        options={rows}
+        busy={busy}
+        title={t("orphan_title", { name: orphan?.label ?? "" })}
+        message={t("orphan_message", { count: orphan?.count ?? 0 })}
+        primaryLabel={t("move_here")}
+        secondaryLabel={t("bring_back_wallet")}
+        busyLabel={t("moving_transactions")}
+        onCancel={() => setOrphan(null)}
+        onReassign={handleMoveOrphan}
+        onDeleteOnly={() => handleRestore(orphan.label)}
+      />
     </Card>
   );
 };
@@ -184,28 +233,6 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     paddingHorizontal: spacing[4],
     marginBottom: spacing[1],
-  },
-  unlistedHint: {
-    ...type.caption,
-    fontSize: 11.5,
-    color: colors.textMuted,
-    paddingHorizontal: spacing[4],
-    paddingBottom: spacing[3],
-  },
-  restoreButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 2,
-    minHeight: 32,
-    paddingHorizontal: spacing[2],
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.primary,
-  },
-  restoreLabel: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: colors.primary,
   },
   pressed: {
     opacity: 0.6,

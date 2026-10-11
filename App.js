@@ -1,5 +1,6 @@
 import "react-native-gesture-handler";
 import { useEffect } from "react";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { StatusBar } from "expo-status-bar";
 import { NavigationContainer } from "@react-navigation/native";
 import * as SplashScreen from "expo-splash-screen";
@@ -30,7 +31,9 @@ export default function App() {
   }, []);
 
   return (
-    <>
+    // Gesture Handler v2 needs this at the root for gestures declared with the
+    // new API (the drag-to-reorder list) to receive touches on Android.
+    <GestureHandlerRootView style={{ flex: 1 }}>
       {/* The header is teal everywhere, so the status bar content is always light. */}
       <StatusBar style="light" />
       <ContextProvider>
@@ -38,6 +41,6 @@ export default function App() {
           <RootNavigator />
         </NavigationContainer>
       </ContextProvider>
-    </>
+    </GestureHandlerRootView>
   );
 }

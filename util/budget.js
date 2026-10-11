@@ -1,5 +1,6 @@
 import { filterByPeriod } from "./date";
 import { getStatusLevel } from "../constants/styles";
+import { expenseCategoryKey } from "../constants/seedNames";
 
 // Days left in the budget's current period, used to turn "80% used" into
 // something actionable like "600K left across 23 days".
@@ -37,8 +38,15 @@ export const computeBudgetProgress = (budget, expenses, now = new Date()) => {
     currentPeriodValue(budget.period, now)
   );
 
+  // Match on the language-independent key, not the raw string: a budget set on
+  // "Food" must still count spending recorded as "Ăn uống" — they are the same
+  // default category under two labels.
+  const budgetKey = expenseCategoryKey(budget.category);
+
   const spent = inPeriod
-    .filter((e) => e.type === "expense" && e.category === budget.category)
+    .filter(
+      (e) => e.type === "expense" && expenseCategoryKey(e.category) === budgetKey
+    )
     .reduce((sum, e) => sum + Number(e.amount || 0), 0);
 
   const limit = Number(budget.amount) || 0;

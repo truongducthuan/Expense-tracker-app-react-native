@@ -1,11 +1,15 @@
 import { useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
+import CategoryAvatar from "../ui/CategoryAvatar";
 import { GlobalStyles } from "../../constants/styles";
 import useMoney from "../../hooks/useMoney";
 import { useLanguage } from "../../store/languageContext";
 import { ExpenseStore } from "../../store/context";
+import { AccountStore } from "../../store/accountContext";
+import { buildAccountBalances } from "../../util/ledger";
+import { normalizeName } from "../../util/tools";
 
 const { colors, spacing, radius, type } = GlobalStyles;
 
@@ -32,20 +36,55 @@ const sumByType = (rows, type) =>
 // balance on screen in public (Insight D — privacy before trust).
 // `scopeKey` names what the income/expense split covers; the caller knows
 // whether it passed a filtered period or the whole history.
+const ALL = "__all__";
+
 const ExpenseSummary = ({ expenses = [], scopeKey = "this_period" }) => {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { money, balance: fmtBalance } = useMoney();
   const { expenses: allExpenses } = ExpenseStore();
+  const { accounts } = AccountStore();
   const [hidden, setHidden] = useState(false);
+  const [picking, setPicking] = useState(false);
+  const [selected, setSelected] = useState(ALL);
 
-  const income = sumByType(expenses, "income");
-  const expense = sumByType(expenses, "expense");
-
-  const balance = useMemo(
-    () =>
-      sumByType(allExpenses, "income") - sumByType(allExpenses, "expense"),
-    [allExpenses]
+  // Per-wallet balances come from the shared ledger, so this card and the one
+  // on the chart screen can never report different numbers for the same wallet.
+  const ledger = useMemo(
+    () => buildAccountBalances(accounts, allExpenses, lang),
+    [accounts, allExpenses, lang]
   );
+
+  const options = useMemo(
+    () => [
+      { key: ALL, name: t("all_accounts"), amount: ledger.total, icon: "wallet" },
+      ...ledger.rows.map((row) => ({ ...row, key: String(row.id) })),
+      ...ledger.unlisted.map((row) => ({
+        key: `orphan:${row.label}`,
+        name: row.label,
+        amount: row.amount,
+        icon: "help-circle-outline",
+      })),
+    ],
+    [ledger, t]
+  );
+
+  const current =
+    options.find((option) => option.key === selected) || options[0];
+  const isAll = current.key === ALL;
+
+  const balance = current.amount;
+
+  // The period split follows the same selection. Only income and expense rows
+  // count — a transfer into a wallet is not income, it is money that was
+  // already yours.
+  const scopedPeriod = useMemo(() => {
+    if (isAll) return expenses;
+    const target = normalizeName(current.name);
+    return expenses.filter((e) => normalizeName(e.account) === target);
+  }, [expenses, isAll, current.name]);
+
+  const income = sumByType(scopedPeriod, "income");
+  const expense = sumByType(scopedPeriod, "expense");
 
   const show = (value) => (hidden ? MASK : money(value));
   // The headline can go negative (spending beyond recorded income), so it
@@ -55,7 +94,20 @@ const ExpenseSummary = ({ expenses = [], scopeKey = "this_period" }) => {
   return (
     <View style={styles.card}>
       <View style={styles.topRow}>
-        <Text style={styles.label}>{t("total_balance")}</Text>
+        {/* The title doubles as the wallet picker: the headline figure and the
+            thing it describes stay in one place. */}
+        <Pressable
+          onPress={() => setPicking(true)}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: picking }}
+          accessibilityLabel={`${t("total_balance")}: ${current.name}`}
+          style={({ pressed }) => [styles.picker, pressed && styles.pressed]}
+        >
+          <Text style={styles.label} numberOfLines={1}>
+            {isAll ? t("total_balance") : current.name}
+          </Text>
+          <Ionicons name="chevron-down" size={14} color={colors.primary100} />
+        </Pressable>
         <Pressable
           onPress={() => setHidden((prev) => !prev)}
           hitSlop={10}
@@ -74,7 +126,9 @@ const ExpenseSummary = ({ expenses = [], scopeKey = "this_period" }) => {
       <Text style={styles.amount} numberOfLines={1} adjustsFontSizeToFit>
         {showBalance()}
       </Text>
-      <Text style={styles.scopeNote}>{t("across_all_accounts")}</Text>
+      <Text style={styles.scopeNote}>
+        {isAll ? t("across_all_accounts") : t("one_account_only")}
+      </Text>
 
       {/* These two are the selected period, not the all-time balance above —
           the caption says so, since the figures sit in the same card. */}
@@ -103,6 +157,73 @@ const ExpenseSummary = ({ expenses = [], scopeKey = "this_period" }) => {
           </Text>
         </View>
       </View>
+
+      <Modal
+        visible={picking}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPicking(false)}
+      >
+        <View style={styles.overlay}>
+          <Pressable
+            style={styles.backdrop}
+            onPress={() => setPicking(false)}
+          />
+          <View style={styles.sheet}>
+            <View style={styles.sheetHandle} />
+            <Text style={styles.sheetTitle}>{t("select_account")}</Text>
+
+            <ScrollView style={styles.sheetList}>
+              {options.map((option) => {
+                const active = option.key === current.key;
+                return (
+                  <Pressable
+                    key={option.key}
+                    onPress={() => {
+                      setSelected(option.key);
+                      setPicking(false);
+                    }}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: active }}
+                    style={({ pressed }) => [
+                      styles.sheetRow,
+                      active && styles.sheetRowActive,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <CategoryAvatar
+                      name={option.name}
+                      icon={option.icon}
+                      size={32}
+                    />
+                    <Text style={styles.sheetName} numberOfLines={1}>
+                      {option.name}
+                    </Text>
+                    {/* Each wallet shows its own balance, so choosing one is an
+                        informed pick rather than a guess. */}
+                    <Text
+                      style={[
+                        styles.sheetAmount,
+                        option.amount < 0 && { color: colors.expenseText },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {fmtBalance(option.amount)}
+                    </Text>
+                    {active && (
+                      <Ionicons
+                        name="checkmark"
+                        size={18}
+                        color={colors.primary}
+                      />
+                    )}
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -124,6 +245,64 @@ const styles = StyleSheet.create({
   label: {
     ...type.label,
     color: colors.primary100,
+    flexShrink: 1,
+  },
+  picker: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[1] + 2,
+    flex: 1,
+    minHeight: 30,
+    paddingRight: spacing[2],
+  },
+  overlay: { ...StyleSheet.absoluteFillObject, justifyContent: "flex-end" },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(17,24,39,0.45)",
+  },
+  sheet: {
+    maxHeight: "70%",
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.lg + 4,
+    borderTopRightRadius: radius.lg + 4,
+    paddingBottom: spacing[4],
+  },
+  sheetHandle: {
+    alignSelf: "center",
+    width: 40,
+    height: 4,
+    borderRadius: radius.full,
+    backgroundColor: colors.border,
+    marginTop: spacing[2],
+    marginBottom: spacing[3],
+  },
+  sheetTitle: {
+    ...type.h3,
+    color: colors.text,
+    paddingHorizontal: spacing[4],
+    marginBottom: spacing[2],
+  },
+  sheetList: { paddingHorizontal: spacing[4] },
+  sheetRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[3],
+    minHeight: 52,
+    paddingHorizontal: spacing[3],
+    marginBottom: spacing[2],
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+  },
+  sheetRowActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primarySurface,
+  },
+  sheetName: { flex: 1, minWidth: 0, ...type.body, color: colors.text },
+  sheetAmount: {
+    ...type.bodyEmphasis,
+    fontWeight: "600",
+    color: colors.textBody,
   },
   eye: {
     width: 30,

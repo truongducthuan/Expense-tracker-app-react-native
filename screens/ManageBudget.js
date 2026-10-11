@@ -13,6 +13,7 @@ import { ExpenseStore } from "../store/context";
 import { useLanguage } from "../store/languageContext";
 import { addBudgetDB, updateBudgetDB, deleteBudgetDB } from "../util/database";
 import { formatInput, formatAmount } from "../util/format";
+import { expenseCategoryKey } from "../constants/seedNames";
 import useMoney from "../hooks/useMoney";
 
 const { colors, spacing, radius, type } = GlobalStyles;
@@ -52,10 +53,13 @@ const ManageBudget = ({ route, navigation }) => {
     if (!category) return 0;
     const since = new Date();
     since.setMonth(since.getMonth() - 3);
+    // Same language-independent match the budget itself uses, so the
+    // suggestion reflects spending recorded under either label.
+    const key = expenseCategoryKey(category);
     const rows = expenses.filter(
       (e) =>
         e.type === "expense" &&
-        e.category === category &&
+        expenseCategoryKey(e.category) === key &&
         new Date(e.date) >= since
     );
     if (!rows.length) return 0;
@@ -75,7 +79,9 @@ const ManageBudget = ({ route, navigation }) => {
     // catching it here lets us say something useful instead of a raw error.
     const clash = budgets.find(
       (b) =>
-        b.category === category && b.period === period && b.id !== budgetId
+        expenseCategoryKey(b.category) === expenseCategoryKey(category) &&
+        b.period === period &&
+        b.id !== budgetId
     );
     if (clash) {
       Alert.alert(t("invalid_input"), t("budget_category_taken"));
