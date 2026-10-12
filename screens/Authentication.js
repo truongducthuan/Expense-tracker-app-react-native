@@ -15,7 +15,7 @@ const EMPTY_FORM = { email: "", password: "" };
 const Authentication = () => {
   const navigation = useNavigation();
   const { login } = AuthStore();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { alert } = useDialog();
 
   const [isLogin, setIsLogin] = useState(true);
@@ -51,7 +51,7 @@ const Authentication = () => {
       return;
     }
     try {
-      await sendPasswordResetApi(values.email);
+      await sendPasswordResetApi(values.email, lang);
       alert({
         title: t("check_your_email"),
         message: `${t("reset_link_sent")} ${values.email}.`,
