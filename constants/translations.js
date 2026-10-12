@@ -216,6 +216,19 @@ export const translations = {
     currency_unit: "Currency",
     currency_display_note: "Changes how amounts are shown. It does not convert existing figures.",
 
+    // Sync
+    sync: "Sync",
+    sync_data: "Account data",
+    sync_data_hint:
+      "Budgets, goals, categories and wallets follow this account, so they are there on your next device.",
+    sync_now: "Sync now",
+    syncing: "Syncing…",
+    sync_up_to_date: "Everything is on your account",
+    sync_updated: "Brought your account's data down to this device",
+    sync_failed: "Couldn't reach your account. Nothing was lost — this device still has everything.",
+    sync_signed_out: "Sign in to keep this data with your account.",
+    sync_device_only: "Reminder time, currency and language stay on this device.",
+
     // Todo
     manage_todo: "Manage Todo",
     today: "Today",
@@ -438,6 +451,19 @@ export const translations = {
     notifications_blocked_hint: "Hãy bật quyền thông báo cho ứng dụng trong cài đặt máy, rồi thử lại.",
     currency_unit: "Đơn vị tiền tệ",
     currency_display_note: "Chỉ thay đổi cách hiển thị số tiền, không quy đổi các số liệu đã có.",
+
+    // Sync
+    sync: "Đồng bộ",
+    sync_data: "Dữ liệu của tài khoản",
+    sync_data_hint:
+      "Ngân sách, mục tiêu, danh mục và ví đi theo tài khoản, nên máy nào đăng nhập cũng có.",
+    sync_now: "Đồng bộ ngay",
+    syncing: "Đang đồng bộ…",
+    sync_up_to_date: "Mọi thứ đã nằm trên tài khoản",
+    sync_updated: "Đã tải dữ liệu của tài khoản về máy này",
+    sync_failed: "Không kết nối được tới tài khoản. Không mất gì cả — máy này vẫn còn đủ dữ liệu.",
+    sync_signed_out: "Đăng nhập để dữ liệu này đi theo tài khoản.",
+    sync_device_only: "Giờ nhắc, đơn vị tiền tệ và ngôn ngữ thì giữ riêng trên máy này.",
 
     // Todo
     manage_todo: "Quản lý công việc",

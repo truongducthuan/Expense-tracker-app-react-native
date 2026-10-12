@@ -25,6 +25,21 @@ const execute = (db, sql, params = []) =>
     });
   });
 
+// Runs several statements in ONE transaction, so either all of them land or
+// none do. `execute` opens a transaction per statement, which is fine for a
+// single write but not for "empty this table, then refill it": a failure
+// halfway through would commit the emptying and lose the list.
+const executeBatch = (db, statements) =>
+  new Promise((resolve, reject) => {
+    db.transaction(
+      (tx) => {
+        for (const [sql, params = []] of statements) tx.executeSql(sql, params);
+      },
+      (err) => reject(err),
+      () => resolve(true)
+    );
+  });
+
 const toNamedRows = (result) =>
   result.rows._array.map((row) => ({
     name: row.name,
@@ -541,3 +556,82 @@ const logAccountState = () =>
       )
     )
     .catch((err) => console.error("account dump failed:", err));
+
+// ---------------------------------------------------------------------------
+// Sync support
+// ---------------------------------------------------------------------------
+
+// Tables that belong to the user rather than the device, so they travel with
+// the account. Reminder time, currency and language stay local on purpose:
+// those describe the device, not the person (a 20:00 nudge on a phone should
+// not start firing on a tablet).
+const DB_BY_TABLE = {
+  categories_expense: categoryExpenseDB,
+  categories_income: categoryIncomeDB,
+  accounts: accountDB,
+  budgets: budgetDB,
+  goals: goalDB,
+};
+
+// The tombstones ride along too; without them a default the user deleted on
+// one device would come back the moment another device seeded itself.
+const TOMBSTONE_TABLES = {
+  categories_expense_removed: categoryExpenseDB,
+  categories_income_removed: categoryIncomeDB,
+  accounts_removed: accountDB,
+};
+
+export const SYNCED_TABLES = [
+  ...Object.keys(DB_BY_TABLE),
+  ...Object.keys(TOMBSTONE_TABLES),
+];
+
+const dbFor = (table) => DB_BY_TABLE[table] || TOMBSTONE_TABLES[table];
+
+const columnsOf = (db, table) =>
+  execute(db, `PRAGMA table_info(${table})`).then((res) =>
+    res.rows._array.map((col) => col.name)
+  );
+
+// Whole-table read. The lists are tens of rows at most, so syncing them as a
+// unit avoids having to reconcile SQLite's autoincrement ids with remote keys.
+export const exportTable = (table) =>
+  dbReady
+    .then(() => execute(dbFor(table), `SELECT * FROM ${table}`))
+    .then((res) => res.rows._array)
+    .catch(() => []);
+
+// Overwrites the table with `rows`, in a single transaction. Refuses a
+// non-array so a failed fetch can never be mistaken for "the user has nothing"
+// and wipe the device.
+export const replaceTable = (table, rows) => {
+  if (!Array.isArray(rows)) return Promise.resolve(false);
+  const db = dbFor(table);
+  if (!db) return Promise.resolve(false);
+
+  return dbReady
+    .then(() => columnsOf(db, table))
+    .then((cols) => {
+      const statements = [[`DELETE FROM ${table}`, []]];
+
+      for (const row of rows) {
+        // Columns this device doesn't have yet (a row written by a newer
+        // version) are skipped rather than inserted as NULL.
+        const present = cols.filter((col) => row[col] !== undefined);
+        if (!present.length) continue;
+        statements.push([
+          `INSERT OR REPLACE INTO ${table} (${present.join(", ")})
+           VALUES (${present.map(() => "?").join(", ")})`,
+          present.map((col) => row[col]),
+        ]);
+      }
+
+      return executeBatch(db, statements);
+    })
+    .then(() => true)
+    .catch((err) => {
+      // The transaction rolled back, so the table still holds what it did.
+      console.error(`replaceTable ${table} failed:`, err);
+      return false;
+    });
+};

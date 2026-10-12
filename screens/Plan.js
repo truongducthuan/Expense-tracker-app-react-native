@@ -14,6 +14,7 @@ import { ExpenseStore } from "../store/context";
 import { BudgetStore } from "../store/budgetContext";
 import { GoalStore } from "../store/goalContext";
 import { useLanguage } from "../store/languageContext";
+import { useSync } from "../store/syncContext";
 import { fetchBudgetsDB, fetchGoalsDB } from "../util/database";
 import { computeBudgetProgress, computeGoalProgress } from "../util/budget";
 import { buildAccountBalances } from "../util/ledger";
@@ -31,11 +32,13 @@ const Plan = () => {
   const { budgets, setBudgets } = BudgetStore();
   const { goals, setGoals } = GoalStore();
   const { accounts } = AccountStore();
+  const { version } = useSync();
 
   const [tab, setTab] = useState("budgets");
 
   // Re-read on focus so returning from the create/edit screens shows the
-  // change without a manual refresh.
+  // change without a manual refresh. `version` bumps when a sync pulled the
+  // account's plans down, so a screen already focused picks them up too.
   useFocusEffect(
     useCallback(() => {
       let active = true;
@@ -52,7 +55,7 @@ const Plan = () => {
       return () => {
         active = false;
       };
-    }, [])
+    }, [version])
   );
 
   const budgetProgress = useMemo(

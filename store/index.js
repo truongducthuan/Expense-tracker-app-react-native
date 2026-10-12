@@ -10,6 +10,7 @@ import CurrencyProvider from "./currencyContext";
 import ReminderProvider from "./reminderContext";
 import BudgetProvider from "./budgetContext";
 import GoalProvider from "./goalContext";
+import SyncProvider from "./syncContext";
 
 export default function ContextProvider({ children }) {
   return (
@@ -18,6 +19,7 @@ export default function ContextProvider({ children }) {
         <CurrencyProvider>
           <ReminderProvider>
             <AuthContextProvider>
+              <SyncProvider>
               <ExpenseProvider>
                 <ProviderAccount>
                   <ProviderCategoryIncome>
@@ -31,6 +33,7 @@ export default function ContextProvider({ children }) {
                   </ProviderCategoryIncome>
                 </ProviderAccount>
               </ExpenseProvider>
+              </SyncProvider>
             </AuthContextProvider>
           </ReminderProvider>
         </CurrencyProvider>

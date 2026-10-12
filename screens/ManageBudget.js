@@ -20,6 +20,7 @@ import { BudgetStore } from "../store/budgetContext";
 import { ExpenseStore } from "../store/context";
 import { useLanguage } from "../store/languageContext";
 import { useDialog } from "../store/dialogContext";
+import { useSync } from "../store/syncContext";
 import { addBudgetDB, updateBudgetDB, deleteBudgetDB } from "../util/database";
 import { formatInput, formatAmount } from "../util/format";
 import { expenseCategoryKey } from "../constants/seedNames";
@@ -36,6 +37,7 @@ const ManageBudget = ({ route, navigation }) => {
 
   const { t } = useLanguage();
   const { alert, confirm } = useDialog();
+  const { publish } = useSync();
   const { money, symbol } = useMoney();
   const { categories } = CategoryStore();
   const { budgets, addBudget, editBudget, removeBudget } = BudgetStore();
@@ -113,6 +115,7 @@ const ManageBudget = ({ route, navigation }) => {
         const id = await addBudgetDB(category, numericAmount, period, threshold);
         addBudget({ id, category, amount: numericAmount, period, threshold });
       }
+      publish("budgets");
       navigation.goBack();
     } catch (err) {
       console.error(err);
@@ -131,6 +134,7 @@ const ManageBudget = ({ route, navigation }) => {
     try {
       await deleteBudgetDB(budgetId);
       removeBudget(budgetId);
+      publish("budgets");
       navigation.goBack();
     } catch (err) {
       console.error(err);

@@ -19,6 +19,7 @@ import { GoalStore } from "../store/goalContext";
 import { AccountStore } from "../store/accountContext";
 import { useLanguage } from "../store/languageContext";
 import { useDialog } from "../store/dialogContext";
+import { useSync } from "../store/syncContext";
 import CategoryAvatar from "../components/ui/CategoryAvatar";
 import {
   addGoalDB,
@@ -40,6 +41,7 @@ const ManageGoal = ({ route, navigation }) => {
 
   const { t } = useLanguage();
   const { alert, confirm } = useDialog();
+  const { publish } = useSync();
   const { money, symbol } = useMoney();
   const { goals, addGoal, editGoal, removeGoal } = GoalStore();
   const { accounts } = AccountStore();
@@ -92,6 +94,7 @@ const ManageGoal = ({ route, navigation }) => {
           account,
         });
       }
+      publish("goals");
       navigation.goBack();
     } catch (err) {
       console.error(err);
@@ -110,6 +113,7 @@ const ManageGoal = ({ route, navigation }) => {
     try {
       await deleteGoalDB(goalId);
       removeGoal(goalId);
+      publish("goals");
       navigation.goBack();
     } catch (err) {
       console.error(err);

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  ActivityIndicator,
   Modal,
   Platform,
   Pressable,
@@ -21,6 +22,8 @@ import { CURRENCY_CODES, CURRENCIES } from "../constants/currencies";
 import { useLanguage } from "../store/languageContext";
 import { useCurrency } from "../store/currencyContext";
 import { useReminder } from "../store/reminderContext";
+import { useSync } from "../store/syncContext";
+import { AuthStore } from "../store/authContext";
 
 const { colors, spacing, radius, type } = GlobalStyles;
 
@@ -63,6 +66,8 @@ const Settings = () => {
   const { lang, setLang, t } = useLanguage();
   const { code, setCurrency } = useCurrency();
   const { reminder, permissionDenied, setEnabled, setTime } = useReminder();
+  const { isSyncing, lastResult, syncNow } = useSync();
+  const { isAuthenticated } = AuthStore();
 
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [draftTime, setDraftTime] = useState(null);
@@ -94,6 +99,19 @@ const Settings = () => {
   const confirmIosTime = () => {
     setShowTimePicker(false);
     if (draftTime) setTime(draftTime.getHours(), draftTime.getMinutes());
+  };
+
+  // Sync runs by itself on sign-in, so this line exists to answer "did it?" —
+  // and the button to retry a sync that failed while the phone was offline,
+  // without making the user sign out and back in.
+  const syncStatus = () => {
+    if (isSyncing) return t("syncing");
+    if (!isAuthenticated) return t("sync_signed_out");
+    if (!lastResult) return t("sync_data_hint");
+    if (!lastResult.ok) return t("sync_failed");
+    return lastResult.direction === "downloaded"
+      ? t("sync_updated")
+      : t("sync_up_to_date");
   };
 
   return (
@@ -259,6 +277,46 @@ const Settings = () => {
         </Card>
       </View>
 
+      {/* Sync ----------------------------------------------------------- */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>{t("sync")}</Text>
+        <Card>
+          <View style={styles.syncRow}>
+            <View
+              style={[
+                styles.rowIcon,
+                { backgroundColor: colors.primarySurface },
+              ]}
+            >
+              <Ionicons
+                name={lastResult && !lastResult.ok ? "cloud-offline" : "cloud-done"}
+                size={19}
+                color={lastResult && !lastResult.ok ? colors.warningText : colors.primary}
+              />
+            </View>
+            <View style={styles.rowText}>
+              <Text style={styles.rowTitle}>{t("sync_data")}</Text>
+              <Text style={styles.rowHint}>{syncStatus()}</Text>
+            </View>
+            {isSyncing && (
+              <ActivityIndicator size="small" color={colors.primary} />
+            )}
+          </View>
+
+          <PrimaryButton
+            mode="secondary"
+            icon="sync"
+            style={styles.syncButton}
+            onPress={syncNow}
+            disabled={isSyncing || !isAuthenticated}
+          >
+            {isSyncing ? t("syncing") : t("sync_now")}
+          </PrimaryButton>
+
+          <Text style={styles.note}>{t("sync_device_only")}</Text>
+        </Card>
+      </View>
+
       {/* Data ----------------------------------------------------------- */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>{t("manage_categories")}</Text>
@@ -350,6 +408,15 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     color: colors.textMuted,
     marginTop: 1,
+  },
+  syncRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[3],
+    minHeight: 48,
+  },
+  syncButton: {
+    marginTop: spacing[3],
   },
   rowValue: {
     ...type.bodyEmphasis,

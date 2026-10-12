@@ -31,6 +31,7 @@ import {
 import { CategoryIncomeStore } from "../store/incomeCategory";
 import { useLanguage } from "../store/languageContext";
 import { useDialog } from "../store/dialogContext";
+import { useSync } from "../store/syncContext";
 
 const { colors, spacing, radius, type } = GlobalStyles;
 
@@ -45,7 +46,8 @@ const AddManageItem = ({ route, navigation }) => {
   const { categoriesIncome, addCategoriesIncome, editCategoriesIncome } =
     CategoryIncomeStore();
   const { t, lang } = useLanguage();
-  const { alert, confirm } = useDialog();
+  const { alert } = useDialog();
+  const { publish } = useSync();
 
   const [valueInput, setValueInput] = useState("");
   const [icon, setIcon] = useState(null);
@@ -113,6 +115,15 @@ const AddManageItem = ({ route, navigation }) => {
         const newId = await addAccountDB(valueInput, lang, icon);
         addAccount({ name: valueInput, id: newId, icon });
       }
+      const table = name.includes("Income")
+        ? "categories_income"
+        : name.includes("Expense")
+        ? "categories_expense"
+        : "accounts";
+      publish(table);
+      // Adding a name clears its tombstone. That has to travel too: a leftover
+      // tombstone on the account would delete the row again on the next sync.
+      publish(`${table}_removed`);
       navigation.goBack();
     } catch (err) {
       if (isDuplicateError(err)) {
