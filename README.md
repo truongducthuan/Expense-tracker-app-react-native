@@ -300,31 +300,32 @@ tiêu đề và tiêu đề `project-…` chỉ sửa được trong Firebase Co
 Giá trị này xuất hiện ở tiêu đề email, trong thân mail và ở dòng ký tên — sửa
 một chỗ là đổi cả ba.
 
-**2. Sửa mẫu email**
+**2. Sửa mẫu email — thường bị Google khoá**
 
 [Authentication → Templates](https://console.firebase.google.com/project/react-native-a2440/authentication/emails)
 → Password reset → ✏️
 
-```
-Tiêu đề:  Đặt lại mật khẩu MoneyMind
+Nhiều project gặp:
 
-Nội dung: Chào bạn,
+> Email template updates are currently unavailable for this project.
+> For assistance with template changes, contact Firebase Support
 
-          Bấm vào đây để đặt lại mật khẩu cho %EMAIL%:
-          %LINK%
+Đây là khoá phía Google (biện pháp chống phishing áp lên phần lớn project từ
+2023), không phải lỗi cấu hình. Liên hệ Support thường không mở lại. **Bước 1 ở
+trên là cài đặt riêng, không nằm trong trình sửa template, nên vẫn đổi được** —
+và nó đã xử lý phần lớn vấn đề: tiêu đề, thân mail và dòng ký tên.
 
-          Link có hiệu lực trong 1 giờ. Nếu bạn không yêu cầu đặt lại
-          mật khẩu, cứ bỏ qua email này.
+**Nếu cần email có thiết kế riêng**
 
-          — MoneyMind
-```
+Chỉ còn cách tự gửi, vì Firebase không cho dùng HTML tuỳ ý kể cả khi template
+mở khoá:
 
-Placeholder dùng được: `%LINK%`, `%EMAIL%`, `%APP_NAME%`, `%DISPLAY_NAME%`.
+1. Backend dùng Admin SDK `generatePasswordResetLink(email)` để lấy link
+2. Gửi email HTML của riêng mình qua SendGrid / Resend / SES
 
-**Giới hạn:** Firebase không cho dùng HTML tuỳ ý trong mẫu mail. Muốn email có
-thiết kế riêng (logo, màu, bố cục) thì phải tạo link bằng Admin SDK
-`generatePasswordResetLink()` ở backend rồi tự gửi qua SendGrid/Resend/SES —
-app hiện gọi thẳng REST API từ client nên chưa có chỗ đặt.
+Cần: service account key, một chỗ chạy backend (Cloud Functions cần gói Blaze;
+Vercel/Render có bậc miễn phí), và tài khoản ESP. App hiện gọi thẳng REST API
+của Firebase từ client nên chưa có chỗ đặt phần này.
 
 ## Lưu ý
 
