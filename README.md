@@ -139,8 +139,15 @@ eas build --profile development --platform ios
 
 **Bước 4**: Khởi động dev server:
 
+open with terminal
+
 ```bash
-npm start
+export EXPO_TOKEN=
+npx expo whoami
+```
+
+```bash
+npx expo start
 ```
 
 Mở app Development Client trên thiết bị → quét QR code hoặc nhập địa chỉ server.
