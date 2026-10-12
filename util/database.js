@@ -122,6 +122,40 @@ const reconcileLangTags = (db, table, seedsByLang) => {
   );
 };
 
+// Seeded defaults are re-inserted on every start, so deleting one brought it
+// straight back on the next launch — and at the bottom of the list, with a new
+// id. This records the names the user removed deliberately so seeding can skip
+// them. Kept per table, in the same database, so it travels with the data.
+const ensureTombstones = (db, table) =>
+  execute(
+    db,
+    `CREATE TABLE IF NOT EXISTS ${table}_removed (
+      name TEXT PRIMARY KEY NOT NULL
+    )`
+  ).catch((err) => console.error("tombstone table failed:", err));
+
+const rememberRemoved = (db, table, name) =>
+  execute(db, `INSERT OR IGNORE INTO ${table}_removed (name) VALUES (?)`, [name]);
+
+const forgetRemoved = (db, table, name) =>
+  execute(db, `DELETE FROM ${table}_removed WHERE name = ?`, [name]);
+
+// Deletes by id and records the name, so a seeded default stays deleted.
+// Non-seeded names are never re-seeded, so recording them is harmless.
+const deleteAndRemember = (db, table, id) =>
+  execute(db, `SELECT name FROM ${table} WHERE id = ?`, [id])
+    .then((res) => res.rows._array[0]?.name)
+    .then((name) =>
+      execute(db, `DELETE FROM ${table} WHERE id = (?)`, [id]).then(() =>
+        name ? rememberRemoved(db, table, name) : null
+      )
+    );
+
+const removedNames = (db, table) =>
+  execute(db, `SELECT name FROM ${table}_removed`)
+    .then((res) => res.rows._array.map((row) => row.name))
+    .catch(() => []);
+
 const seed = (db, table, names, lang) => {
   const placeholders = names.map(() => "(?, ?)").join(", ");
   const params = names.flatMap((n) => [n, lang]);
@@ -144,11 +178,15 @@ const createNamedTable = (db, table, seedsByLang) =>
     .then(() => ensureIconColumn(db, table))
     .then(() => ensurePositionColumn(db, table))
     .then(() => reconcileLangTags(db, table, seedsByLang))
-    .then(() =>
+    .then(() => ensureTombstones(db, table))
+    .then(() => removedNames(db, table))
+    .then((removed) =>
       Promise.all(
-        Object.entries(seedsByLang).map(([lang, names]) =>
-          seed(db, table, names, lang).catch((err) => console.error(err))
-        )
+        Object.entries(seedsByLang).map(([lang, names]) => {
+          const keep = names.filter((n) => !removed.includes(n));
+          if (!keep.length) return Promise.resolve();
+          return seed(db, table, keep, lang).catch((err) => console.error(err));
+        })
       )
     )
     // Freshly seeded rows arrive without one.
@@ -168,12 +206,13 @@ export const fetchCategoriesExpenseDB = (lang = "en") =>
 // `lang` is accepted for call-site symmetry but deliberately not stored: a
 // category the user typed shows in every language (see ALL_LANGS).
 export const addExpenseCategory = (name, lang = "en", icon = null) =>
+  forgetRemoved(categoryExpenseDB, "categories_expense", name).then(() =>
   execute(
     categoryExpenseDB,
     `INSERT INTO categories_expense (name, lang, icon, position)
        VALUES (?, ?, ?, (SELECT IFNULL(MAX(position), 0) + 1 FROM categories_expense))`,
     [name, ALL_LANGS, icon]
-  ).then((res) => res.insertId);
+  )).then((res) => res.insertId);
 
 export const updateExpenseCategory = (name, id, icon = null) =>
   execute(
@@ -183,7 +222,7 @@ export const updateExpenseCategory = (name, id, icon = null) =>
   );
 
 export const deleteExpenseCategory = (id) =>
-  execute(categoryExpenseDB, "DELETE FROM categories_expense WHERE id = (?)", [id]);
+  deleteAndRemember(categoryExpenseDB, "categories_expense", id);
 
 export const initCategoryIncomeDB = () =>
   createNamedTable(categoryIncomeDB, "categories_income", INCOME_CATEGORIES);
@@ -197,17 +236,18 @@ export const fetchCategoryIncomeDB = (lang = "en") =>
   ).then(toNamedRows));
 
 export const deleteCategoryIncomeDB = (id) =>
-  execute(categoryIncomeDB, "DELETE FROM categories_income WHERE id = (?)", [id]);
+  deleteAndRemember(categoryIncomeDB, "categories_income", id);
 
 // `lang` is accepted for call-site symmetry but deliberately not stored: a
 // category the user typed shows in every language (see ALL_LANGS).
 export const addIncomeCategory = (name, lang = "en", icon = null) =>
+  forgetRemoved(categoryIncomeDB, "categories_income", name).then(() =>
   execute(
     categoryIncomeDB,
     `INSERT INTO categories_income (name, lang, icon, position)
        VALUES (?, ?, ?, (SELECT IFNULL(MAX(position), 0) + 1 FROM categories_income))`,
     [name, ALL_LANGS, icon]
-  ).then((res) => res.insertId);
+  )).then((res) => res.insertId);
 
 export const updateIncomeCategory = (name, id, icon = null) =>
   execute(
@@ -250,10 +290,12 @@ export const restoreAccountDB = (name, icon = null) =>
           new Error(`"${name}" is a default account and cannot be restored`)
         );
       }
-      return execute(accountDB, "UPDATE accounts SET lang = ? WHERE name = ?", [
-        ALL_LANGS,
-        name,
-      ]);
+      return forgetRemoved(accountDB, "accounts", name).then(() =>
+        execute(accountDB, "UPDATE accounts SET lang = ? WHERE name = ?", [
+          ALL_LANGS,
+          name,
+        ])
+      );
     })
     .then((res) =>
       res.rowsAffected > 0
@@ -267,16 +309,17 @@ export const restoreAccountDB = (name, icon = null) =>
     );
 
 export const deleteAccountDB = (id) =>
-  execute(accountDB, "DELETE FROM accounts WHERE id = (?)", [id]);
+  deleteAndRemember(accountDB, "accounts", id);
 
 // As above: user-created accounts are not language-scoped.
 export const addAccountDB = (name, lang = "en", icon = null) =>
+  forgetRemoved(accountDB, "accounts", name).then(() =>
   execute(accountDB, `INSERT INTO accounts (name, lang, icon, position)
        VALUES (?, ?, ?, (SELECT IFNULL(MAX(position), 0) + 1 FROM accounts))`, [
     name,
     ALL_LANGS,
     icon,
-  ]).then((res) => res.insertId);
+  ])).then((res) => res.insertId);
 
 export const updateAccountDB = (name, id, icon = null) =>
   execute(accountDB, "UPDATE accounts SET name = (?), icon = (?) WHERE id = (?)", [

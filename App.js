@@ -1,6 +1,7 @@
 import "react-native-gesture-handler";
 import { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { NavigationContainer } from "@react-navigation/native";
 import * as SplashScreen from "expo-splash-screen";
@@ -34,13 +35,17 @@ export default function App() {
     // Gesture Handler v2 needs this at the root for gestures declared with the
     // new API (the drag-to-reorder list) to receive touches on Android.
     <GestureHandlerRootView style={{ flex: 1 }}>
-      {/* The header is teal everywhere, so the status bar content is always light. */}
-      <StatusBar style="light" />
-      <ContextProvider>
-        <NavigationContainer theme={appNavigationTheme}>
-          <RootNavigator />
-        </NavigationContainer>
-      </ContextProvider>
+      {/* Supplies the real device insets. Without it `useSafeAreaInsets` reads
+          zero, and the tab bar would sit under the iPhone home indicator. */}
+      <SafeAreaProvider>
+        {/* The header is teal everywhere, so the status bar content is always light. */}
+        <StatusBar style="light" />
+        <ContextProvider>
+          <NavigationContainer theme={appNavigationTheme}>
+            <RootNavigator />
+          </NavigationContainer>
+        </ContextProvider>
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }

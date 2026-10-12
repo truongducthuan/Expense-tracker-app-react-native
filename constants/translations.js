@@ -112,6 +112,7 @@ export const translations = {
       "This transaction will be removed. This cannot be undone.",
     error_occurred: "Something went wrong",
     okay: "Okay",
+    done: "Done",
     saving: "Saving...",
 
     // Settings / profile
@@ -334,6 +335,7 @@ export const translations = {
       "Giao dịch này sẽ bị xoá và không thể hoàn tác.",
     error_occurred: "Đã xảy ra lỗi",
     okay: "Đã hiểu",
+    done: "Xong",
     saving: "Đang lưu...",
 
     // Settings / profile

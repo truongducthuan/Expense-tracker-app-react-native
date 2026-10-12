@@ -1,5 +1,14 @@
 import { useLayoutEffect, useMemo, useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
 import Card from "../components/ui/Card";
 import PrimaryInput from "../components/ui/PrimaryInput";
@@ -126,7 +135,10 @@ const ManageBudget = ({ route, navigation }) => {
   };
 
   return (
-    <View style={styles.root}>
+    <KeyboardAvoidingView
+      style={styles.root}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
       <ScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
@@ -235,7 +247,7 @@ const ManageBudget = ({ route, navigation }) => {
           {t("save")}
         </PrimaryButton>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 

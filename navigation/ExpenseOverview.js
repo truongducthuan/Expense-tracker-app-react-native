@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, View } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
 import AllExpense from "../screens/AllExpense";
@@ -8,7 +9,7 @@ import Plan from "../screens/Plan";
 import Settings from "../screens/Settings";
 import SelectPicker from "../components/ui/SelectPicker";
 import IconDrawer from "./IconDrawer";
-import { baseTabScreenOptions } from "./navigationTheme";
+import { baseTabScreenOptions, tabBarStyleWithInsets } from "./navigationTheme";
 import { GlobalStyles } from "../constants/styles";
 import { useLanguage } from "../store/languageContext";
 
@@ -36,11 +37,13 @@ const AddButton = ({ onPress, label }) => (
 
 const ExpenseOverview = () => {
   const { t } = useLanguage();
+  const insets = useSafeAreaInsets();
 
   return (
     <Tab.Navigator
       screenOptions={({ navigation, route }) => ({
         ...baseTabScreenOptions,
+        tabBarStyle: tabBarStyleWithInsets(insets),
         headerLeft: (props) => <IconDrawer {...props} />,
         // The period picker only means something on the chart.
         headerRight: () =>

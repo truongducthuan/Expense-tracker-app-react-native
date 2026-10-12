@@ -1,5 +1,14 @@
 import { useLayoutEffect, useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import Card from "../components/ui/Card";
@@ -109,7 +118,10 @@ const ManageGoal = ({ route, navigation }) => {
   };
 
   return (
-    <View style={styles.root}>
+    <KeyboardAvoidingView
+      style={styles.root}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
       <ScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
@@ -279,7 +291,7 @@ const ManageGoal = ({ route, navigation }) => {
           {t("save")}
         </PrimaryButton>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 

@@ -1,5 +1,14 @@
 import { useLayoutEffect, useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import PrimaryInput from "../components/ui/PrimaryInput";
@@ -129,7 +138,10 @@ const AddManageItem = ({ route, navigation }) => {
   }
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
       <ScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
@@ -208,7 +220,7 @@ const AddManageItem = ({ route, navigation }) => {
           {t("save")}
         </PrimaryButton>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 

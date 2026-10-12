@@ -21,9 +21,7 @@ export const baseTabScreenOptions = {
     backgroundColor: colors.surface,
     borderTopColor: colors.border,
     borderTopWidth: 1,
-    height: 62,
     paddingTop: 6,
-    paddingBottom: 8,
     // The raised centre action overhangs the bar, so it must not be clipped
     // (Android clips by default once elevation is set).
     elevation: 0,
@@ -34,6 +32,18 @@ export const baseTabScreenOptions = {
   tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
   tabBarItemStyle: { paddingTop: 2 },
 };
+
+// Height has to account for the home indicator on iPhones without a home
+// button. React Navigation adds that inset itself, but only while the style
+// leaves `height` alone — setting a fixed height silently opted out of it and
+// pushed the tab labels under the indicator.
+export const TAB_BAR_HEIGHT = 62;
+
+export const tabBarStyleWithInsets = (insets) => ({
+  ...baseTabScreenOptions.tabBarStyle,
+  height: TAB_BAR_HEIGHT + insets.bottom,
+  paddingBottom: 8 + insets.bottom,
+});
 
 // react-navigation theme so the containers/cards behind screens match.
 export const appNavigationTheme = {

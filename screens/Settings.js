@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -13,6 +14,7 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { useNavigation } from "@react-navigation/native";
 
 import Card from "../components/ui/Card";
+import PrimaryButton from "../components/ui/PrimaryButton";
 import SegmentedControl from "../components/ui/SegmentedControl";
 import { GlobalStyles } from "../constants/styles";
 import { CURRENCY_CODES, CURRENCIES } from "../constants/currencies";
@@ -63,25 +65,36 @@ const Settings = () => {
   const { reminder, permissionDenied, setEnabled, setTime } = useReminder();
 
   const [showTimePicker, setShowTimePicker] = useState(false);
-
-  const notificationContent = {
-    title: t("reminder_title"),
-    body: t("reminder_body"),
-  };
+  const [draftTime, setDraftTime] = useState(null);
 
   const handleToggleReminder = (value) => {
-    setEnabled(value, notificationContent);
-  };
-
-  const handleTimeChange = (event, date) => {
-    // Android fires with type "dismissed" when the user backs out.
-    setShowTimePicker(Platform.OS === "ios");
-    if (event?.type === "dismissed" || !date) return;
-    setTime(date.getHours(), date.getMinutes(), notificationContent);
+    setEnabled(value);
   };
 
   const reminderDate = new Date();
   reminderDate.setHours(reminder.hour, reminder.minute, 0, 0);
+
+  const openPicker = () => {
+    setDraftTime(reminderDate);
+    setShowTimePicker(true);
+  };
+
+  // Android shows the picker as its own dialog and reports the final value, so
+  // the change is committed straight away.
+  const handleAndroidChange = (event, date) => {
+    setShowTimePicker(false);
+    if (event?.type === "dismissed" || !date) return;
+    setTime(date.getHours(), date.getMinutes());
+  };
+
+  // iOS renders the spinner inline and never dismisses itself — it used to be
+  // left on screen with no way out and no way to confirm. It now lives in a
+  // sheet with its own Done button, and the spinner edits a draft so cancelling
+  // leaves the saved time alone.
+  const confirmIosTime = () => {
+    setShowTimePicker(false);
+    if (draftTime) setTime(draftTime.getHours(), draftTime.getMinutes());
+  };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -112,7 +125,7 @@ const Settings = () => {
 
           {reminder.enabled && (
             <Pressable
-              onPress={() => setShowTimePicker(true)}
+              onPress={openPicker}
               accessibilityRole="button"
               style={({ pressed }) => [
                 styles.row,
@@ -150,14 +163,43 @@ const Settings = () => {
           )}
         </Card>
 
-        {showTimePicker && (
+        {showTimePicker && Platform.OS !== "ios" && (
           <DateTimePicker
             value={reminderDate}
             mode="time"
             is24Hour
-            display={Platform.OS === "ios" ? "spinner" : "default"}
-            onChange={handleTimeChange}
+            display="default"
+            onChange={handleAndroidChange}
           />
+        )}
+
+        {Platform.OS === "ios" && (
+          <Modal
+            visible={showTimePicker}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setShowTimePicker(false)}
+          >
+            <View style={styles.pickerOverlay}>
+              <Pressable
+                style={styles.pickerBackdrop}
+                onPress={() => setShowTimePicker(false)}
+              />
+              <View style={styles.pickerSheet}>
+                <Text style={styles.pickerTitle}>{t("reminder_time")}</Text>
+                <DateTimePicker
+                  value={draftTime ?? reminderDate}
+                  mode="time"
+                  is24Hour
+                  display="spinner"
+                  onChange={(_, date) => date && setDraftTime(date)}
+                />
+                <PrimaryButton onPress={confirmIosTime}>
+                  {t("done")}
+                </PrimaryButton>
+              </View>
+            </View>
+          </Modal>
         )}
       </View>
 
@@ -364,5 +406,22 @@ const styles = StyleSheet.create({
   },
   pressed: {
     backgroundColor: colors.surfaceAlt,
+  },
+  pickerOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: "flex-end" },
+  pickerBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(17,24,39,0.45)",
+  },
+  pickerSheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.lg + 4,
+    borderTopRightRadius: radius.lg + 4,
+    padding: spacing[4],
+    gap: spacing[2],
+  },
+  pickerTitle: {
+    ...type.h3,
+    color: colors.text,
+    textAlign: "center",
   },
 });
