@@ -1,5 +1,6 @@
 import { useLayoutEffect, useState } from "react";
-import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 import Card from "../components/ui/Card";
 import PrimaryInput from "../components/ui/PrimaryInput";
@@ -7,7 +8,9 @@ import PrimaryButton from "../components/ui/PrimaryButton";
 import ProgressBar from "../components/ui/ProgressBar";
 import { GlobalStyles } from "../constants/styles";
 import { GoalStore } from "../store/goalContext";
+import { AccountStore } from "../store/accountContext";
 import { useLanguage } from "../store/languageContext";
+import CategoryAvatar from "../components/ui/CategoryAvatar";
 import {
   addGoalDB,
   updateGoalDB,
@@ -29,6 +32,7 @@ const ManageGoal = ({ route, navigation }) => {
   const { t } = useLanguage();
   const { money, symbol } = useMoney();
   const { goals, addGoal, editGoal, removeGoal } = GoalStore();
+  const { accounts } = AccountStore();
 
   const existing = goals.find((g) => g.id === goalId);
   const progress = existing ? computeGoalProgress(existing) : null;
@@ -38,6 +42,7 @@ const ManageGoal = ({ route, navigation }) => {
     existing ? String(existing.target) : ""
   );
   const [deposit, setDeposit] = useState("");
+  const [account, setAccount] = useState(existing?.account ?? null);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -63,10 +68,10 @@ const ManageGoal = ({ route, navigation }) => {
         await depositGoalDB(goalId, numericDeposit);
         editGoal({ saved: (existing?.saved || 0) + numericDeposit }, goalId);
       } else if (isEditing) {
-        await updateGoalDB(goalId, name.trim(), numericTarget, null);
-        editGoal({ name: name.trim(), target: numericTarget }, goalId);
+        await updateGoalDB(goalId, name.trim(), numericTarget, null, account);
+        editGoal({ name: name.trim(), target: numericTarget, account }, goalId);
       } else {
-        const id = await addGoalDB(name.trim(), numericTarget, null);
+        const id = await addGoalDB(name.trim(), numericTarget, null, account);
         addGoal({
           id,
           name: name.trim(),
@@ -74,6 +79,7 @@ const ManageGoal = ({ route, navigation }) => {
           saved: 0,
           deadline: null,
           createdAt: new Date().toISOString(),
+          account,
         });
       }
       navigation.goBack();
@@ -178,6 +184,74 @@ const ManageGoal = ({ route, navigation }) => {
           )}
         </Card>
 
+        {/* Linking a wallet turns the goal into a live reading of that
+            wallet's balance: money moved into it counts automatically, and
+            the goal completes when the wallet reaches the target. Optional —
+            without a link the goal is topped up by hand. */}
+        {!isDeposit && (
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>{t("goal_account")}</Text>
+
+            <Card padded={false}>
+              <Pressable
+                onPress={() => setAccount(null)}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: !account }}
+                style={({ pressed }) => [
+                  styles.walletRow,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <View style={styles.manualIcon}>
+                  <Ionicons name="hand-left-outline" size={17} color={colors.textMuted} />
+                </View>
+                <View style={styles.walletText}>
+                  <Text style={styles.walletName}>{t("goal_manual")}</Text>
+                  <Text style={styles.walletHint}>{t("goal_manual_hint")}</Text>
+                </View>
+                <Ionicons
+                  name={!account ? "radio-button-on" : "radio-button-off"}
+                  size={19}
+                  color={!account ? colors.primary : colors.border}
+                />
+              </Pressable>
+
+              {accounts.map((item) => {
+                const active = account === item.name;
+                return (
+                  <Pressable
+                    key={item.id}
+                    onPress={() => setAccount(item.name)}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: active }}
+                    style={({ pressed }) => [
+                      styles.walletRow,
+                      styles.walletDivided,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <CategoryAvatar name={item.name} icon={item.icon} size={32} />
+                    <Text style={styles.walletName} numberOfLines={1}>
+                      {item.name}
+                    </Text>
+                    <Ionicons
+                      name={active ? "radio-button-on" : "radio-button-off"}
+                      size={19}
+                      color={active ? colors.primary : colors.border}
+                    />
+                  </Pressable>
+                );
+              })}
+            </Card>
+
+            {!!account && (
+              <Text style={styles.linkNote}>
+                {t("goal_account_note", { name: account })}
+              </Text>
+            )}
+          </View>
+        )}
+
         {isEditing && !isDeposit && (
           <PrimaryButton
             mode="dangerGhost"
@@ -223,6 +297,38 @@ const styles = StyleSheet.create({
   goalAmounts: { ...type.caption, color: colors.textMuted },
   goalRemaining: { ...type.caption, color: colors.textBody },
   card: { gap: spacing[1] },
+  section: { gap: spacing[2] },
+  sectionLabel: { ...type.label, color: colors.textMuted },
+  walletRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[3],
+    minHeight: 56,
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[2],
+  },
+  walletDivided: {
+    borderTopWidth: 1,
+    borderTopColor: colors.n100,
+  },
+  walletText: { flex: 1, minWidth: 0 },
+  walletName: { flex: 1, minWidth: 0, ...type.body, color: colors.text },
+  walletHint: { ...type.caption, fontSize: 12, color: colors.textMuted },
+  manualIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: colors.surfaceAlt,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  linkNote: {
+    ...type.caption,
+    fontSize: 12,
+    color: colors.primary,
+    paddingHorizontal: spacing[1],
+  },
+  pressed: { opacity: 0.7 },
   field: { marginTop: 0 },
   label: { ...type.label, color: colors.textMuted, marginTop: spacing[2] },
   amountRow: { flexDirection: "row", alignItems: "center", gap: spacing[2] },

@@ -94,9 +94,20 @@ export const budgetMessage = (progress) => {
 // Savings-goal progress, plus the projected finish date the report asks for:
 // pace is measured from the goal's creation, so the estimate reflects what the
 // user has actually been putting aside rather than an assumed monthly figure.
-export const computeGoalProgress = (goal, now = new Date()) => {
+//
+// A goal can be LINKED to a wallet. Its progress is then the wallet's balance
+// rather than a manually kept figure: moving money into that wallet is the
+// act of saving, and the goal completes when the wallet reaches the target.
+// `linkedBalance` is that balance, supplied by the caller which already has the
+// ledger. Goals created before linking existed keep `account` null and go on
+// using their own `saved` column.
+export const computeGoalProgress = (goal, now = new Date(), linkedBalance) => {
   const target = Number(goal.target) || 0;
-  const saved = Number(goal.saved) || 0;
+  const linked = !!goal.account;
+  // A wallet can be overdrawn; a goal is never less than empty.
+  const saved = linked
+    ? Math.max(0, Number(linkedBalance) || 0)
+    : Number(goal.saved) || 0;
   const ratio = target > 0 ? Math.min(saved / target, 1) : 0;
   const remaining = Math.max(0, target - saved);
 
@@ -117,6 +128,7 @@ export const computeGoalProgress = (goal, now = new Date()) => {
     ...goal,
     target,
     saved,
+    linked,
     ratio,
     remaining,
     percent: Math.round(ratio * 100),

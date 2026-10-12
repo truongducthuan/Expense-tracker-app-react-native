@@ -16,17 +16,21 @@ import { GoalStore } from "../store/goalContext";
 import { useLanguage } from "../store/languageContext";
 import { fetchBudgetsDB, fetchGoalsDB } from "../util/database";
 import { computeBudgetProgress, computeGoalProgress } from "../util/budget";
+import { buildAccountBalances } from "../util/ledger";
+import { AccountStore } from "../store/accountContext";
+import { normalizeName } from "../util/tools";
 import useMoney from "../hooks/useMoney";
 
 const { colors, spacing, type } = GlobalStyles;
 
 const Plan = () => {
   const navigation = useNavigation();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { money } = useMoney();
   const { expenses } = ExpenseStore();
   const { budgets, setBudgets } = BudgetStore();
   const { goals, setGoals } = GoalStore();
+  const { accounts } = AccountStore();
 
   const [tab, setTab] = useState("budgets");
 
@@ -56,9 +60,28 @@ const Plan = () => {
     [budgets, expenses]
   );
 
+  // Wallet balances for goals that track one. Built once and looked up by
+  // normalised name, so a goal keeps working if the wallet is renamed in the
+  // other language.
+  const walletBalances = useMemo(() => {
+    const { rows, unlisted } = buildAccountBalances(accounts, expenses, lang);
+    const map = new Map();
+    for (const row of [...rows, ...unlisted.map((u) => ({ name: u.label, amount: u.amount }))]) {
+      map.set(normalizeName(row.name), row.amount);
+    }
+    return map;
+  }, [accounts, expenses, lang]);
+
   const goalProgress = useMemo(
-    () => goals.map((g) => computeGoalProgress(g)),
-    [goals]
+    () =>
+      goals.map((g) =>
+        computeGoalProgress(
+          g,
+          new Date(),
+          g.account ? walletBalances.get(normalizeName(g.account)) ?? 0 : undefined
+        )
+      ),
+    [goals, walletBalances]
   );
 
   const totals = useMemo(() => {

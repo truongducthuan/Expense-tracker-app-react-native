@@ -195,6 +195,13 @@ export const translations = {
     goal_complete: "Reached — nice work",
     goal_almost: "Only {amount} to go",
     goal_no_pace: "Add some money to see a finish date",
+    goal_account: "Track with a wallet",
+    goal_manual: "Top up by hand",
+    goal_manual_hint: "You add to this goal yourself.",
+    goal_account_note:
+      "Progress follows the balance of “{name}”. Move money into that wallet and the goal fills up on its own.",
+    goal_tracks_account: "Tracks {name}",
+    goal_linked_empty: "Move money into “{name}” to get started",
 
     // Reminder & currency
     reminder: "Reminder",
@@ -410,6 +417,13 @@ export const translations = {
     goal_complete: "Đã đạt — tuyệt vời",
     goal_almost: "Chỉ còn {amount} nữa thôi",
     goal_no_pace: "Nạp một ít để thấy ngày dự kiến hoàn thành",
+    goal_account: "Theo dõi bằng ví",
+    goal_manual: "Tự nạp tay",
+    goal_manual_hint: "Bạn tự cộng tiền vào mục tiêu này.",
+    goal_account_note:
+      "Tiến độ bám theo số dư của ví “{name}”. Cứ chuyển tiền vào ví đó là mục tiêu tự đầy lên.",
+    goal_tracks_account: "Theo ví {name}",
+    goal_linked_empty: "Chuyển tiền vào ví “{name}” để bắt đầu",
 
     // Reminder & currency
     reminder: "Nhắc nhở",

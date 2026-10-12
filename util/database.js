@@ -388,7 +388,13 @@ const toGoalRows = (result) =>
     saved: Number(row.saved),
     deadline: row.deadline || null,
     createdAt: row.createdAt,
+    account: row.account || null,
   }));
+
+// Links a goal to a wallet. Existing goals keep `account` NULL and go on
+// working off manual deposits, so nothing breaks on upgrade.
+const ensureGoalAccountColumn = () =>
+  execute(goalDB, "ALTER TABLE goals ADD COLUMN account TEXT").catch(() => {});
 
 export const initGoalDB = () =>
   execute(
@@ -401,23 +407,25 @@ export const initGoalDB = () =>
       deadline TEXT,
       createdAt TEXT NOT NULL
     )`
-  );
+  ).then(ensureGoalAccountColumn);
 
 export const fetchGoalsDB = () =>
   execute(goalDB, "SELECT * FROM goals ORDER BY id DESC").then(toGoalRows);
 
-export const addGoalDB = (name, target, deadline) =>
+export const addGoalDB = (name, target, deadline, account = null) =>
   execute(
     goalDB,
-    "INSERT INTO goals (name, target, saved, deadline, createdAt) VALUES (?, ?, 0, ?, ?)",
-    [name, target, deadline || null, new Date().toISOString()]
+    `INSERT INTO goals (name, target, saved, deadline, createdAt, account)
+     VALUES (?, ?, 0, ?, ?, ?)`,
+    [name, target, deadline || null, new Date().toISOString(), account]
   ).then((res) => res.insertId);
 
-export const updateGoalDB = (id, name, target, deadline) =>
+export const updateGoalDB = (id, name, target, deadline, account = null) =>
   execute(
     goalDB,
-    "UPDATE goals SET name = (?), target = (?), deadline = (?) WHERE id = (?)",
-    [name, target, deadline || null, id]
+    `UPDATE goals SET name = (?), target = (?), deadline = (?), account = (?)
+     WHERE id = (?)`,
+    [name, target, deadline || null, account, id]
   );
 
 // Deposits clamp at zero so a withdrawal can never drive the goal negative.
