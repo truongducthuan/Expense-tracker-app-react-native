@@ -1,5 +1,4 @@
 import { useState, useLayoutEffect } from "react";
-import { Alert } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 
 import Loading from "../components/ui/Loading";
@@ -9,6 +8,7 @@ import { loginApi, signUpApi, sendPasswordResetApi } from "../api/auth";
 import { AuthStore } from "../store/authContext";
 import useGoogleAuth from "../hooks/useGoogleAuth";
 import { useLanguage } from "../store/languageContext";
+import { useDialog } from "../store/dialogContext";
 
 const EMPTY_FORM = { email: "", password: "" };
 
@@ -16,6 +16,7 @@ const Authentication = () => {
   const navigation = useNavigation();
   const { login } = AuthStore();
   const { t } = useLanguage();
+  const { alert } = useDialog();
 
   const [isLogin, setIsLogin] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -46,15 +47,16 @@ const Authentication = () => {
 
   const handleForgotPassword = async () => {
     if (!values.email.includes("@")) {
-      Alert.alert(t("email_required"), t("enter_email_to_reset"));
+      alert({ title: t("email_required"), message: t("enter_email_to_reset"), tone: "warning" });
       return;
     }
     try {
       await sendPasswordResetApi(values.email);
-      Alert.alert(
-        t("check_your_email"),
-        `${t("reset_link_sent")} ${values.email}.`
-      );
+      alert({
+        title: t("check_your_email"),
+        message: `${t("reset_link_sent")} ${values.email}.`,
+        tone: "success",
+      });
     } catch (err) {
       setErrorMessage(t("could_not_send_reset"));
     }
@@ -64,7 +66,7 @@ const Authentication = () => {
     const isValid =
       values.email.includes("@") && values.password.length >= 6;
     if (!isValid) {
-      Alert.alert(t("invalid_input"), t("check_values"));
+      alert({ title: t("invalid_input"), message: t("check_values"), tone: "warning" });
       return;
     }
 

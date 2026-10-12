@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useState } from "react";
-import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import DraggableFlatList, {
   ScaleDecorator,
@@ -30,6 +30,7 @@ import {
 import { CategoryIncomeStore } from "../store/incomeCategory";
 import IconButton from "../components/ui/IconButton";
 import { useLanguage } from "../store/languageContext";
+import { useDialog } from "../store/dialogContext";
 
 const { colors, spacing, radius, type } = GlobalStyles;
 
@@ -40,6 +41,7 @@ const ManageItem = ({ name }) => {
     CategoryIncomeStore();
   const navigation = useNavigation();
   const { lang, t } = useLanguage();
+  const { alert, confirm } = useDialog();
   const { expenses, updateExpense } = ExpenseStore();
   const [isLoading, setIsLoading] = useState(true);
   const [pendingDelete, setPendingDelete] = useState(null);
@@ -118,14 +120,11 @@ const ManageItem = ({ name }) => {
     const usage = usageOf(item);
 
     if (!usage.length) {
-      Alert.alert(t("delete"), `${item.name}`, [
-        { text: t("cancel"), style: "cancel" },
-        {
-          text: t("delete"),
-          style: "destructive",
-          onPress: () => removeItem(item.id),
-        },
-      ]);
+      confirm({
+        title: `${t("delete")} “${item.name}”`,
+        confirmLabel: t("delete"),
+        destructive: true,
+      }).then((ok) => ok && removeItem(item.id));
       return;
     }
 
@@ -152,7 +151,7 @@ const ManageItem = ({ name }) => {
       setPendingDelete(null);
     } catch (err) {
       console.error(err);
-      Alert.alert(t("error_occurred"), t("could_not_save"));
+      alert({ title: t("error_occurred"), message: t("could_not_save"), tone: "warning" });
     } finally {
       setIsReassigning(false);
     }

@@ -1,6 +1,5 @@
 import { useLayoutEffect, useMemo, useState } from "react";
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -20,6 +19,7 @@ import { CategoryStore } from "../store/categoryContext";
 import { BudgetStore } from "../store/budgetContext";
 import { ExpenseStore } from "../store/context";
 import { useLanguage } from "../store/languageContext";
+import { useDialog } from "../store/dialogContext";
 import { addBudgetDB, updateBudgetDB, deleteBudgetDB } from "../util/database";
 import { formatInput, formatAmount } from "../util/format";
 import { expenseCategoryKey } from "../constants/seedNames";
@@ -35,6 +35,7 @@ const ManageBudget = ({ route, navigation }) => {
   const isEditing = !!budgetId;
 
   const { t } = useLanguage();
+  const { alert, confirm } = useDialog();
   const { money, symbol } = useMoney();
   const { categories } = CategoryStore();
   const { budgets, addBudget, editBudget, removeBudget } = BudgetStore();
@@ -93,7 +94,11 @@ const ManageBudget = ({ route, navigation }) => {
         b.id !== budgetId
     );
     if (clash) {
-      Alert.alert(t("invalid_input"), t("budget_category_taken"));
+      alert({
+        title: t("invalid_input"),
+        message: t("budget_category_taken"),
+        tone: "warning",
+      });
       return;
     }
 
@@ -111,27 +116,25 @@ const ManageBudget = ({ route, navigation }) => {
       navigation.goBack();
     } catch (err) {
       console.error(err);
-      Alert.alert(t("error_occurred"), t("could_not_save"));
+      alert({ title: t("error_occurred"), message: t("could_not_save"), tone: "warning" });
     }
   };
 
-  const handleDelete = () => {
-    Alert.alert(t("delete_budget"), t("delete_budget_confirm"), [
-      { text: t("cancel"), style: "cancel" },
-      {
-        text: t("delete"),
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await deleteBudgetDB(budgetId);
-            removeBudget(budgetId);
-            navigation.goBack();
-          } catch (err) {
-            console.error(err);
-          }
-        },
-      },
-    ]);
+  const handleDelete = async () => {
+    const ok = await confirm({
+      title: t("delete_budget"),
+      message: t("delete_budget_confirm"),
+      confirmLabel: t("delete"),
+      destructive: true,
+    });
+    if (!ok) return;
+    try {
+      await deleteBudgetDB(budgetId);
+      removeBudget(budgetId);
+      navigation.goBack();
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return (

@@ -1,5 +1,5 @@
 import { useLayoutEffect, useState } from "react";
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "react-native";
 
 import { GlobalStyles } from "../constants/styles";
 import { CATEGORY_TYPE } from "../constants/config";
@@ -13,6 +13,7 @@ import ManagePopup from "../components/popup/ManagePopup";
 import NavExpense from "../components/expenses/NavExpense";
 import { AuthStore } from "../store/authContext";
 import { useLanguage } from "../store/languageContext";
+import { useDialog } from "../store/dialogContext";
 
 const { colors, spacing } = GlobalStyles;
 
@@ -29,6 +30,7 @@ const ManageExpense = ({ route, navigation }) => {
   } = ExpenseStore();
   const { user, isAuthenticated } = AuthStore();
   const { t } = useLanguage();
+  const { alert, confirm } = useDialog();
 
   const expenseId = route.params?.expenseId;
   const [isLoading, setIsLoading] = useState(false);
@@ -88,26 +90,25 @@ const ManageExpense = ({ route, navigation }) => {
   // Deleting is irreversible here, so it asks first (Nielsen #3 — the prototype
   // offers 5s undo instead; a confirm is the honest equivalent without a
   // queue to undo from).
-  const handleDelete = () => {
-    Alert.alert(t("delete_expense"), t("delete_expense_confirm"), [
-      { text: t("cancel"), style: "cancel" },
-      {
-        text: t("delete"),
-        style: "destructive",
-        onPress: async () => {
-          setIsLoading(true);
-          try {
-            await deleteExpenses(expenseId);
-            deleteExpense(expenseId);
-            navigation.goBack();
-          } catch (err) {
-            setError(t("could_not_delete"));
-          } finally {
-            setIsLoading(false);
-          }
-        },
-      },
-    ]);
+  const handleDelete = async () => {
+    const ok = await confirm({
+      title: t("delete_expense"),
+      message: t("delete_expense_confirm"),
+      confirmLabel: t("delete"),
+      destructive: true,
+    });
+    if (!ok) return;
+
+    setIsLoading(true);
+    try {
+      await deleteExpenses(expenseId);
+      deleteExpense(expenseId);
+      navigation.goBack();
+    } catch (err) {
+      setError(t("could_not_delete"));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const cancelhandler = () => {
@@ -180,7 +181,7 @@ const ManageExpense = ({ route, navigation }) => {
       }
       setIsLoading(false);
     } else {
-      Alert.alert(t("invalid_input"), t("check_values"));
+      alert({ title: t("invalid_input"), message: t("check_values"), tone: "warning" });
       setIsLoading(false);
     }
   };

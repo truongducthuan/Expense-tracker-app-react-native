@@ -1,6 +1,5 @@
 import { useLayoutEffect, useState } from "react";
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -31,6 +30,7 @@ import {
 } from "../util/database";
 import { CategoryIncomeStore } from "../store/incomeCategory";
 import { useLanguage } from "../store/languageContext";
+import { useDialog } from "../store/dialogContext";
 
 const { colors, spacing, radius, type } = GlobalStyles;
 
@@ -45,6 +45,7 @@ const AddManageItem = ({ route, navigation }) => {
   const { categoriesIncome, addCategoriesIncome, editCategoriesIncome } =
     CategoryIncomeStore();
   const { t, lang } = useLanguage();
+  const { alert, confirm } = useDialog();
 
   const [valueInput, setValueInput] = useState("");
   const [icon, setIcon] = useState(null);
@@ -87,7 +88,7 @@ const AddManageItem = ({ route, navigation }) => {
 
   const handleChange = async () => {
     if (!valueInput.trim().length || !name) {
-      Alert.alert(t("invalid_input"), t("please_check_input"));
+      alert({ title: t("invalid_input"), message: t("please_check_input"), tone: "warning" });
       return;
     }
 
@@ -115,7 +116,11 @@ const AddManageItem = ({ route, navigation }) => {
       navigation.goBack();
     } catch (err) {
       if (isDuplicateError(err)) {
-        Alert.alert(t("duplicate_name"), t("name_already_exists"));
+        alert({
+          title: t("duplicate_name"),
+          message: t("name_already_exists"),
+          tone: "warning",
+        });
       } else {
         setError(t("could_not_save"));
         console.error(err);

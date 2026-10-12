@@ -1,6 +1,5 @@
 import { useLayoutEffect, useState } from "react";
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -19,6 +18,7 @@ import { GlobalStyles } from "../constants/styles";
 import { GoalStore } from "../store/goalContext";
 import { AccountStore } from "../store/accountContext";
 import { useLanguage } from "../store/languageContext";
+import { useDialog } from "../store/dialogContext";
 import CategoryAvatar from "../components/ui/CategoryAvatar";
 import {
   addGoalDB,
@@ -39,6 +39,7 @@ const ManageGoal = ({ route, navigation }) => {
   const isDeposit = mode === "deposit";
 
   const { t } = useLanguage();
+  const { alert, confirm } = useDialog();
   const { money, symbol } = useMoney();
   const { goals, addGoal, editGoal, removeGoal } = GoalStore();
   const { accounts } = AccountStore();
@@ -94,27 +95,25 @@ const ManageGoal = ({ route, navigation }) => {
       navigation.goBack();
     } catch (err) {
       console.error(err);
-      Alert.alert(t("error_occurred"), t("could_not_save"));
+      alert({ title: t("error_occurred"), message: t("could_not_save"), tone: "warning" });
     }
   };
 
-  const handleDelete = () => {
-    Alert.alert(t("delete_goal"), t("delete_goal_confirm"), [
-      { text: t("cancel"), style: "cancel" },
-      {
-        text: t("delete"),
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await deleteGoalDB(goalId);
-            removeGoal(goalId);
-            navigation.goBack();
-          } catch (err) {
-            console.error(err);
-          }
-        },
-      },
-    ]);
+  const handleDelete = async () => {
+    const ok = await confirm({
+      title: t("delete_goal"),
+      message: t("delete_goal_confirm"),
+      confirmLabel: t("delete"),
+      destructive: true,
+    });
+    if (!ok) return;
+    try {
+      await deleteGoalDB(goalId);
+      removeGoal(goalId);
+      navigation.goBack();
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return (
