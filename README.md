@@ -286,6 +286,46 @@ eas build:list                                    # Xem lịch sử build
 
 ---
 
+## Cấu hình Firebase (không nằm trong code)
+
+Email đặt lại mật khẩu do Firebase Authentication tự sinh. Ngôn ngữ của email
+được app gửi kèm (`X-Firebase-Locale` trong `api/auth.js`), nhưng tên người gửi,
+tiêu đề và tiêu đề `project-…` chỉ sửa được trong Firebase Console.
+
+**1. Đổi `project-300384576511` thành `MoneyMind`**
+
+[Project settings → General](https://console.firebase.google.com/project/react-native-a2440/settings/general)
+→ **Public-facing name**
+
+Giá trị này xuất hiện ở tiêu đề email, trong thân mail và ở dòng ký tên — sửa
+một chỗ là đổi cả ba.
+
+**2. Sửa mẫu email**
+
+[Authentication → Templates](https://console.firebase.google.com/project/react-native-a2440/authentication/emails)
+→ Password reset → ✏️
+
+```
+Tiêu đề:  Đặt lại mật khẩu MoneyMind
+
+Nội dung: Chào bạn,
+
+          Bấm vào đây để đặt lại mật khẩu cho %EMAIL%:
+          %LINK%
+
+          Link có hiệu lực trong 1 giờ. Nếu bạn không yêu cầu đặt lại
+          mật khẩu, cứ bỏ qua email này.
+
+          — MoneyMind
+```
+
+Placeholder dùng được: `%LINK%`, `%EMAIL%`, `%APP_NAME%`, `%DISPLAY_NAME%`.
+
+**Giới hạn:** Firebase không cho dùng HTML tuỳ ý trong mẫu mail. Muốn email có
+thiết kế riêng (logo, màu, bố cục) thì phải tạo link bằng Admin SDK
+`generatePasswordResetLink()` ở backend rồi tự gửi qua SendGrid/Resend/SES —
+app hiện gọi thẳng REST API từ client nên chưa có chỗ đặt.
+
 ## Lưu ý
 
 - File `google-services.json` cần có trong thư mục gốc để Firebase hoạt động trên Android
