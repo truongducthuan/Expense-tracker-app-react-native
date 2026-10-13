@@ -13,6 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import Card from "../components/ui/Card";
 import PrimaryInput from "../components/ui/PrimaryInput";
 import PrimaryButton from "../components/ui/PrimaryButton";
+import ActionBar from "../components/ui/ActionBar";
 import ProgressBar from "../components/ui/ProgressBar";
 import { GlobalStyles } from "../constants/styles";
 import { GoalStore } from "../store/goalContext";
@@ -278,7 +279,7 @@ const ManageGoal = ({ route, navigation }) => {
         )}
       </ScrollView>
 
-      <View style={styles.actionBar}>
+      <ActionBar style={styles.actionRow}>
         <PrimaryButton
           style={styles.actionSecondary}
           mode="secondary"
@@ -293,7 +294,7 @@ const ManageGoal = ({ route, navigation }) => {
         >
           {t("save")}
         </PrimaryButton>
-      </View>
+      </ActionBar>
     </KeyboardAvoidingView>
   );
 };
@@ -350,15 +351,9 @@ const styles = StyleSheet.create({
   amountField: { flex: 1, marginVertical: 0 },
   amountInput: { ...type.display, fontSize: 32, color: colors.text },
   currency: { ...type.h2, fontWeight: "700", color: colors.text },
-  actionBar: {
+  actionRow: {
     flexDirection: "row",
     gap: spacing[3],
-    paddingHorizontal: spacing[4],
-    paddingTop: spacing[3],
-    paddingBottom: spacing[4],
-    backgroundColor: colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
   },
   actionSecondary: { flex: 1 },
   actionPrimary: { flex: 1.4 },

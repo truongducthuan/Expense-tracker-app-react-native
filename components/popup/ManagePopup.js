@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import HeaderPopup from "../ui/HeaderPopup";
 import ListItem from "./ListItem";
@@ -16,6 +17,7 @@ const { colors, radius } = GlobalStyles;
 // closes it, so there is always a way out without hunting for the ✕
 // (Nielsen #3 — user control and freedom).
 const ManagePopup = ({ setIsPopup, name, titleName }) => {
+  const insets = useSafeAreaInsets();
   const { categories } = CategoryStore();
   const { accounts } = AccountStore();
   const { categoriesIncome } = CategoryIncomeStore();
@@ -35,7 +37,7 @@ const ManagePopup = ({ setIsPopup, name, titleName }) => {
         onPress={() => setIsPopup(false)}
         accessibilityRole="button"
       />
-      <View style={styles.sheet}>
+      <View style={[styles.sheet, { paddingBottom: insets.bottom }]}>
         <HeaderPopup name={name} icon="create-outline" setIsPopup={setIsPopup} />
         <ListItem
           items={items || []}

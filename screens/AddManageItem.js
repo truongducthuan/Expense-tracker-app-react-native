@@ -12,6 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import PrimaryInput from "../components/ui/PrimaryInput";
 import PrimaryButton from "../components/ui/PrimaryButton";
+import ActionBar from "../components/ui/ActionBar";
 import Card from "../components/ui/Card";
 import CategoryAvatar from "../components/ui/CategoryAvatar";
 import { ICON_CHOICES } from "../constants/categoryIcons";
@@ -228,14 +229,14 @@ const AddManageItem = ({ route, navigation }) => {
         </View>
       </ScrollView>
 
-      <View style={styles.actionBar}>
+      <ActionBar>
         <PrimaryButton
           onPress={handleChange}
           disabled={!valueInput.trim().length}
         >
           {t("save")}
         </PrimaryButton>
-      </View>
+      </ActionBar>
     </KeyboardAvoidingView>
   );
 };
@@ -303,14 +304,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textMuted,
     marginTop: spacing[3],
-  },
-  actionBar: {
-    paddingHorizontal: spacing[4],
-    paddingTop: spacing[3],
-    paddingBottom: spacing[4],
-    backgroundColor: colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
   },
   pressed: {
     opacity: 0.6,
