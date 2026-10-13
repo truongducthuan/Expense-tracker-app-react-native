@@ -4,6 +4,7 @@ import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "re
 import { GlobalStyles } from "../constants/styles";
 import { CATEGORY_TYPE } from "../constants/config";
 import PrimaryButton from "../components/ui/PrimaryButton";
+import ActionBar from "../components/ui/ActionBar";
 import { ExpenseStore } from "../store/context";
 import ExpenseForm from "../components/ExpenseForm";
 import { storeExpense, updateExpenses, deleteExpenses } from "../api/http";
@@ -240,7 +241,7 @@ const ManageExpense = ({ route, navigation }) => {
 
         {/* Actions pinned to the bottom: the primary action sits in the thumb
             zone rather than scrolling off the top (Fitts's law). */}
-        <View style={styles.actionBar}>
+        <ActionBar style={styles.actionRow}>
           <PrimaryButton
             style={styles.actionSecondary}
             mode="secondary"
@@ -255,7 +256,7 @@ const ManageExpense = ({ route, navigation }) => {
           >
             {isEditing ? t("update") : t("add")}
           </PrimaryButton>
-        </View>
+        </ActionBar>
       </KeyboardAvoidingView>
 
       {isPopup && (
@@ -286,15 +287,9 @@ const styles = StyleSheet.create({
   deleteButton: {
     marginTop: spacing[3],
   },
-  actionBar: {
+  actionRow: {
     flexDirection: "row",
     gap: spacing[3],
-    paddingHorizontal: spacing[4],
-    paddingTop: spacing[3],
-    paddingBottom: spacing[4],
-    backgroundColor: colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
   },
   actionSecondary: {
     flex: 1,

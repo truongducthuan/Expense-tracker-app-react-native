@@ -11,6 +11,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import Card from "../components/ui/Card";
 import PrimaryButton from "../components/ui/PrimaryButton";
+import ActionBar from "../components/ui/ActionBar";
 import PrimaryInput from "../components/ui/PrimaryInput";
 import Loading from "../components/ui/Loading";
 import { GlobalStyles } from "../constants/styles";
@@ -133,7 +134,7 @@ const DeleteAccount = ({ navigation }) => {
         </Card>
       </ScrollView>
 
-      <View style={styles.actionBar}>
+      <ActionBar style={styles.actionRow}>
         <PrimaryButton mode="secondary" onPress={() => navigation.goBack()}>
           {t("cancel")}
         </PrimaryButton>
@@ -146,7 +147,7 @@ const DeleteAccount = ({ navigation }) => {
         >
           {t("delete_account_action")}
         </PrimaryButton>
-      </View>
+      </ActionBar>
     </KeyboardAvoidingView>
   );
 };
@@ -208,15 +209,9 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginBottom: spacing[2],
   },
-  actionBar: {
+  actionRow: {
     flexDirection: "row",
     gap: spacing[3],
-    paddingHorizontal: spacing[4],
-    paddingTop: spacing[3],
-    paddingBottom: spacing[4],
-    backgroundColor: colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
   },
   deleteButton: {
     flex: 1,

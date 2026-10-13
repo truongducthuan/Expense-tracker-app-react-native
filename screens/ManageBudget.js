@@ -12,6 +12,7 @@ import {
 import Card from "../components/ui/Card";
 import PrimaryInput from "../components/ui/PrimaryInput";
 import PrimaryButton from "../components/ui/PrimaryButton";
+import ActionBar from "../components/ui/ActionBar";
 import SegmentedControl from "../components/ui/SegmentedControl";
 import CategoryAvatar from "../components/ui/CategoryAvatar";
 import { GlobalStyles } from "../constants/styles";
@@ -238,7 +239,7 @@ const ManageBudget = ({ route, navigation }) => {
         )}
       </ScrollView>
 
-      <View style={styles.actionBar}>
+      <ActionBar style={styles.actionRow}>
         <PrimaryButton
           style={styles.actionSecondary}
           mode="secondary"
@@ -253,7 +254,7 @@ const ManageBudget = ({ route, navigation }) => {
         >
           {t("save")}
         </PrimaryButton>
-      </View>
+      </ActionBar>
     </KeyboardAvoidingView>
   );
 };
@@ -311,15 +312,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing[3],
   },
   hintText: { fontSize: 12.5, color: colors.primary, fontWeight: "500" },
-  actionBar: {
+  actionRow: {
     flexDirection: "row",
     gap: spacing[3],
-    paddingHorizontal: spacing[4],
-    paddingTop: spacing[3],
-    paddingBottom: spacing[4],
-    backgroundColor: colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
   },
   actionSecondary: { flex: 1 },
   actionPrimary: { flex: 1.4 },

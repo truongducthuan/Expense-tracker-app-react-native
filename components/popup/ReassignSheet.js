@@ -8,6 +8,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
 import CategoryAvatar from "../ui/CategoryAvatar";
@@ -40,6 +41,7 @@ const ReassignSheet = ({
   secondaryLabel,
   busyLabel,
 }) => {
+  const insets = useSafeAreaInsets();
   const { t } = useLanguage();
   const [target, setTarget] = useState(null);
 
@@ -58,7 +60,7 @@ const ReassignSheet = ({
       <View style={styles.overlay}>
         <Pressable style={styles.backdrop} onPress={busy ? undefined : close} />
 
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, { paddingBottom: spacing[4] + insets.bottom }]}>
           <View style={styles.handle} />
 
           <View style={styles.header}>
@@ -165,7 +167,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderTopLeftRadius: radius.lg + 4,
     borderTopRightRadius: radius.lg + 4,
-    paddingBottom: spacing[4],
     ...GlobalStyles.shadow.lg,
   },
   handle: {

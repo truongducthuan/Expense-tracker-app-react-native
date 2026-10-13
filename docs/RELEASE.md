@@ -45,24 +45,36 @@ Nguồn: [Play target API](https://support.google.com/googleplay/android-develop
 - Apple Developer Program — 99 USD/năm. Bắt buộc, không có đường vòng.
 - Google Play Console — 25 USD một lần.
 
-### 3.2 Sửa quyền sở hữu project trên EAS
+### 3.2 Project trên EAS — đã thông
 
-Lần trước lệnh EAS trả về:
+Lỗi `Entity Not Authorized` lần trước là do lúc đó đăng nhập bằng tài khoản
+khác. Với tài khoản `thuantd` (thuan.truong.dev@gmail.com) thì project đọc
+được bình thường:
 
 ```
-Entity Not Authorized: AppEntity[7db209aa-666c-4107-90c3-7e2ad38fbebd]
+fullName  @thuantd/expense-stracker-app
+ID        7db209aa-666c-4107-90c3-7e2ad38fbebd
 ```
 
-`app.json` đang trỏ `owner: "thuantd"` và một `projectId` mà tài khoản bạn đăng
-nhập không có quyền đọc. Chọn một trong hai:
+Nếu sau này lại gặp lỗi đó, nghĩa là đang đăng nhập nhầm tài khoản —
+`eas whoami` để kiểm tra, `eas login` để đổi, hoặc `eas init --force` nếu muốn
+tạo project mới dưới tài khoản đang dùng.
+
+### 3.2b Hai bản Node đang chồng nhau trên máy
+
+`which node` trong terminal cho ra **Homebrew node v23.11.0**, trong khi nvm
+có sẵn 22.23.3. Expo SDK 57 yêu cầu Node **22.13 trở lên** và 23 là bản lẻ,
+không phải LTS, không nằm trong danh sách Expo hỗ trợ. Hiện tại nó vẫn chạy
+được, nên không cần đổi gấp; nhưng nếu gặp lỗi lạ lúc build hay lúc bundle thì
+đây là chỗ đầu tiên nên nhìn:
 
 ```bash
-# a) dùng chính tài khoản sở hữu project cũ
-npx eas login
-
-# b) hoặc tạo project mới dưới tài khoản đang dùng
-npx eas init --force    # ghi lại projectId/owner mới vào app.json
+brew unlink node      # bỏ symlink của Homebrew, nvm node 22 sẽ được dùng
+# quay lại: brew link node
 ```
+
+`eas-cli` đã được cài vào đúng Node mà terminal dùng (bản 24.13.0), và bản cũ
+19.1.0 trong nvm đã gỡ để khỏi lẫn.
 
 ### 3.3 Host chính sách quyền riêng tư
 
