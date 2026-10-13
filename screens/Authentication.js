@@ -1,5 +1,6 @@
-import { useState, useLayoutEffect } from "react";
-import { useNavigation } from "@react-navigation/native";
+import { useCallback, useState, useLayoutEffect } from "react";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import { setStatusBarStyle } from "expo-status-bar";
 
 import Loading from "../components/ui/Loading";
 import ErrorOverlay from "../components/ui/ErrorOverlay";
@@ -39,6 +40,18 @@ const Authentication = () => {
   useLayoutEffect(() => {
     navigation.setOptions({ headerShown: false });
   }, [navigation]);
+
+  // Everywhere else the screen starts with a teal header, so the clock and
+  // battery are drawn light. Here the background is the pale mint one, and
+  // light-on-mint made them all but invisible — about 1.1:1, against the 4.5:1
+  // the rest of this design holds itself to. Dark while this screen has focus,
+  // back to light on the way out.
+  useFocusEffect(
+    useCallback(() => {
+      setStatusBarStyle("dark");
+      return () => setStatusBarStyle("light");
+    }, [])
+  );
 
   const handleChangeField = (name, value) =>
     setValues((prev) => ({ ...prev, [name]: value }));
