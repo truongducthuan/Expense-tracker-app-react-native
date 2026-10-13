@@ -16,6 +16,7 @@ import AnualYear from "../screens/AnualYear";
 import ManageBudget from "../screens/ManageBudget";
 import ManageGoal from "../screens/ManageGoal";
 import ManagerTodo from "../components/todoList/ManagerTodo";
+import DeleteAccount from "../screens/DeleteAccount";
 
 const Stack = createNativeStackNavigator();
 const AuthStack = createNativeStackNavigator();
@@ -107,6 +108,11 @@ const RootNavigator = () => {
         name="ManageItem"
         component={ManageItemOverview}
         options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="DeleteAccount"
+        component={DeleteAccount}
+        options={{ title: t("delete_account") }}
       />
       <Stack.Screen
         name="ManageTodo"

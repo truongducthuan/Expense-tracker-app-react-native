@@ -79,6 +79,9 @@ const Authentication = () => {
           name: data.name,
           photo: data?.photo,
           token: data.idToken,
+          // Recorded so account deletion knows whether there is a password to
+          // re-authenticate with: a Google sign-in never created one.
+          provider: "password",
         });
         setValues(EMPTY_FORM);
         goToApp();

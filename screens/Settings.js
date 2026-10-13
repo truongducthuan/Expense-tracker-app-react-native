@@ -67,7 +67,7 @@ const Settings = () => {
   const { code, setCurrency } = useCurrency();
   const { reminder, permissionDenied, setEnabled, setTime } = useReminder();
   const { isSyncing, lastResult, syncNow } = useSync();
-  const { isAuthenticated } = AuthStore();
+  const { user, isAuthenticated } = AuthStore();
 
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [draftTime, setDraftTime] = useState(null);
@@ -274,6 +274,54 @@ const Settings = () => {
             })}
           </View>
           <Text style={styles.note}>{t("currency_display_note")}</Text>
+        </Card>
+      </View>
+
+      {/* Account ---------------------------------------------------------- */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>{t("account")}</Text>
+        <Card padded={false}>
+          <View style={styles.row}>
+            <View
+              style={[styles.rowIcon, { backgroundColor: colors.primarySurface }]}
+            >
+              <Ionicons name="person" size={19} color={colors.primary} />
+            </View>
+            <View style={styles.rowText}>
+              <Text style={styles.rowTitle}>{t("signed_in_as")}</Text>
+              <Text style={styles.rowHint} numberOfLines={1}>
+                {user?.email || t("sync_signed_out")}
+              </Text>
+            </View>
+          </View>
+
+          {/* Both stores require an app that creates accounts to offer
+              deletion from inside it, and to make it findable. */}
+          {isAuthenticated && (
+            <Pressable
+              onPress={() => navigation.navigate("DeleteAccount")}
+              accessibilityRole="button"
+              android_ripple={{ color: colors.surfaceAlt }}
+              style={({ pressed }) => [
+                styles.row,
+                styles.rowDivided,
+                pressed && styles.pressed,
+              ]}
+            >
+              <View
+                style={[styles.rowIcon, { backgroundColor: colors.expenseSurface }]}
+              >
+                <Ionicons name="trash" size={19} color={colors.expenseText} />
+              </View>
+              <View style={styles.rowText}>
+                <Text style={[styles.rowTitle, { color: colors.expenseText }]}>
+                  {t("delete_account")}
+                </Text>
+                <Text style={styles.rowHint}>{t("delete_account_hint")}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.border} />
+            </Pressable>
+          )}
         </Card>
       </View>
 

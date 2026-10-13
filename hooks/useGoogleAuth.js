@@ -13,6 +13,7 @@ const toUser = (profile, token) => ({
   name: profile.name,
   photo: profile.picture,
   token,
+  provider: "google",
 });
 
 // Drives the Google OAuth flow. Calls onSuccess(user) once the access token is

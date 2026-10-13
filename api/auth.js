@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const IDENTITY_TOOLKIT_KEY = "AIzaSyDOQYVx5oeWJ2ZhAyp85oD8mjnF2zO7ago";
+export const IDENTITY_TOOLKIT_KEY = "AIzaSyDOQYVx5oeWJ2ZhAyp85oD8mjnF2zO7ago";
 const GOOGLE_USERINFO_URL = "https://www.googleapis.com/userinfo/v2/me";
 
 const authenticate = async (mode, email, password) => {
