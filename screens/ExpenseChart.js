@@ -9,8 +9,6 @@ import {
   Text,
   View,
 } from "react-native";
-import { VictoryPie, VictoryLabel } from "victory-native";
-import { Line } from "react-native-svg";
 
 import { ExpenseStore } from "../store/context";
 import { AuthStore } from "../store/authContext";
@@ -22,6 +20,7 @@ import useExpenseChartData from "../hooks/useExpenseChartData";
 import ListChar from "../components/expenses/ListChar";
 import HeaderTime from "../components/ui/HeaderTime";
 import TotalTypeIncome from "../components/charts/TotalTypeIncome";
+import DonutChart from "../components/charts/DonutChart";
 import Card from "../components/ui/Card";
 import EmptyState from "../components/ui/EmptyState";
 import useMoney from "../hooks/useMoney";
@@ -31,17 +30,6 @@ const { colors, spacing, radius, type } = GlobalStyles;
 // Slices below this percentage hide their label and leader line (still shown in
 // the legend below) to avoid unreadable overlap between thin adjacent slices.
 const LABEL_THRESHOLD = 4;
-
-// Leader line connecting a slice to its label. VictoryPie's built-in indicator
-// renders a web <line> that crashes on React Native, so we draw it with
-// react-native-svg's <Line> and the x1/y1/x2/y2 props Victory passes in.
-// `index`/`data` let us skip the line for slices under the threshold.
-const LabelLine = ({ x1, y1, x2, y2, index, data, threshold }) => {
-  if (data?.[index] && data[index].y < threshold) return null;
-  return (
-    <Line x1={x1} y1={y1} x2={x2} y2={y2} stroke={colors.border} strokeWidth={1} />
-  );
-};
 
 // Expense/income toggle rendered as two summary cards rather than coloured
 // buttons: each one states its own total, so the figure you are about to chart
@@ -204,44 +192,13 @@ function ExpenseChart({ navigation }) {
                 accessibilityRole="image"
                 accessibilityLabel={accessibleSummary}
               >
-                <VictoryPie
-                  // Remount whenever the slices actually change. Victory's
-                  // `animate` interpolates between old and new datums and can
-                  // leave labels holding stale values, which is how the donut
-                  // and the legend drifted apart; animation is off and the key
-                  // covers the data itself, not just its length.
+                <DonutChart
+                  // Remounts whenever the slices actually change, so nothing
+                  // of the previous period can linger on screen.
                   key={chartSignature}
                   data={data}
-                  x="x"
-                  y="y"
-                  width={chartSize}
-                  height={chartSize}
-                  padding={{ top: 28, bottom: 28, left: 64, right: 64 }}
-                  innerRadius={chartSize * 0.17}
-                  padAngle={1}
-                  colorScale={data.map((slice) => slice.color)}
-                  labelPosition="centroid"
-                  labelRadius={({ radius }) => radius + 20}
-                  labelIndicator={
-                    <LabelLine data={data} threshold={LABEL_THRESHOLD} />
-                  }
-                  labelIndicatorInnerOffset={8}
-                  labelIndicatorOuterOffset={4}
-                  // `pct` is the same integer the legend prints — never rounded
-                  // a second time here.
-                  labels={({ datum }) =>
-                    datum.y >= LABEL_THRESHOLD ? `${datum.pct}%` : null
-                  }
-                  labelComponent={
-                    <VictoryLabel
-                      style={{
-                        fill: colors.textBody,
-                        fontSize: 11,
-                        fontWeight: "600",
-                      }}
-                    />
-                  }
-                  style={{ data: { stroke: colors.surface, strokeWidth: 2 } }}
+                  size={chartSize}
+                  labelThreshold={LABEL_THRESHOLD}
                 />
               </View>
 

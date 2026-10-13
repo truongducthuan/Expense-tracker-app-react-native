@@ -18,7 +18,10 @@ SplashScreen.preventAutoHideAsync();
 // a user who happens to have it open at 20:00 silently misses the nudge.
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
+    // `shouldShowAlert` was split in two: the banner that slides in, and the
+    // entry kept in the notification centre. Both are wanted here.
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: false,
     shouldSetBadge: false,
   }),

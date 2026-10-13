@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import AppLoading from "expo-app-loading";
 import * as SplashScreen from "expo-splash-screen";
 
 import { baseHeaderOptions } from "./navigationTheme";
@@ -38,24 +37,29 @@ function Root() {
   const { login } = AuthStore();
   const [isRestoring, setIsRestoring] = useState(true);
 
+  // The splash screen is held open by App.js until this finishes, so hiding it
+  // has to happen on every path out of here. It used to be hidden only when a
+  // stored session was found: a first-time user, or anyone whose storage read
+  // threw, was left looking at the splash with the app running underneath it.
   useEffect(() => {
     const restoreSession = async () => {
       try {
         const stored = await AsyncStorage.getItem("infoUser");
-        if (stored) {
-          login(JSON.parse(stored));
-          await SplashScreen.hideAsync();
-        }
-        setIsRestoring(false);
+        if (stored) login(JSON.parse(stored));
       } catch (err) {
         console.error(err);
+      } finally {
+        setIsRestoring(false);
+        SplashScreen.hideAsync().catch(() => {});
       }
     };
     restoreSession();
   }, []);
 
+  // expo-app-loading was removed from the SDK. Keeping the native splash up
+  // is what it did anyway, and it avoids a blank frame between the two.
   if (isRestoring) {
-    return <AppLoading />;
+    return null;
   }
   return <Navigation />;
 }

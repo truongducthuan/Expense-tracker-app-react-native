@@ -92,10 +92,13 @@ const ReminderProvider = ({ children }) => {
         // replace it without touching anything else.
         data: { kind: CHANNEL_ID },
       },
+      // expo-notifications now wants the trigger's kind stated outright. The
+      // old shorthand — hour/minute plus `repeats: true` — is read as a
+      // one-off time interval and would fire once, then never again.
       trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DAILY,
         hour: next.hour,
         minute: next.minute,
-        repeats: true,
         channelId: Platform.OS === "android" ? CHANNEL_ID : undefined,
       },
     });

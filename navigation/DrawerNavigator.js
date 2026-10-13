@@ -20,7 +20,7 @@ const DrawerNavigator = () => {
     <Drawer.Navigator
       screenOptions={{
         ...baseHeaderOptions,
-        sceneContainerStyle: { backgroundColor: GlobalStyles.colors.screen },
+        sceneStyle: { backgroundColor: GlobalStyles.colors.screen },
         drawerContentStyle: { backgroundColor: GlobalStyles.colors.surface },
         drawerInactiveTintColor: GlobalStyles.colors.textBody,
         drawerActiveTintColor: GlobalStyles.colors.primary,

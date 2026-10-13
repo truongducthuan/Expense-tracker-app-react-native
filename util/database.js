@@ -7,38 +7,44 @@ import {
   translateAccountName,
 } from "../constants/seedNames";
 
-const categoryExpenseDB = SQLite.openDatabase("categories_expense.db");
-const categoryIncomeDB = SQLite.openDatabase("categories_income.db");
-const accountDB = SQLite.openDatabase("accounts.db");
-const todoDB = SQLite.openDatabase("todoList.db");
+// expo-sqlite dropped the callback-based `db.transaction(tx => tx.executeSql())`
+// API. The handles are opened synchronously now, and statements run through
+// runAsync/getAllAsync — see `execute` below, which keeps the old result shape
+// so the rest of this file reads the same as it did.
+const categoryExpenseDB = SQLite.openDatabaseSync("categories_expense.db");
+const categoryIncomeDB = SQLite.openDatabaseSync("categories_income.db");
+const accountDB = SQLite.openDatabaseSync("accounts.db");
+const todoDB = SQLite.openDatabaseSync("todoList.db");
 
-// Promisified executeSql: resolves with the SQL result, rejects with the error.
-const execute = (db, sql, params = []) =>
-  new Promise((resolve, reject) => {
-    db.transaction((tx) => {
-      tx.executeSql(
-        sql,
-        params,
-        (_, result) => resolve(result),
-        (_, err) => reject(err)
-      );
-    });
-  });
+// Rows come back from a different call than writes do, so the statement is
+// sniffed once here. Everything downstream still receives the old WebSQL-ish
+// shape — `res.rows._array`, `res.insertId`, `res.rowsAffected` — which is why
+// the migration didn't have to touch every query in this file.
+const READS = /^\s*(SELECT|PRAGMA|WITH|EXPLAIN)/i;
+
+const execute = async (db, sql, params = []) => {
+  if (READS.test(sql)) {
+    const rows = await db.getAllAsync(sql, params);
+    return { rows: { _array: rows, length: rows.length }, insertId: null, rowsAffected: 0 };
+  }
+  const result = await db.runAsync(sql, params);
+  return {
+    rows: { _array: [], length: 0 },
+    insertId: result.lastInsertRowId,
+    rowsAffected: result.changes,
+  };
+};
 
 // Runs several statements in ONE transaction, so either all of them land or
 // none do. `execute` opens a transaction per statement, which is fine for a
 // single write but not for "empty this table, then refill it": a failure
 // halfway through would commit the emptying and lose the list.
 const executeBatch = (db, statements) =>
-  new Promise((resolve, reject) => {
-    db.transaction(
-      (tx) => {
-        for (const [sql, params = []] of statements) tx.executeSql(sql, params);
-      },
-      (err) => reject(err),
-      () => resolve(true)
-    );
-  });
+  db
+    .withTransactionAsync(async () => {
+      for (const [sql, params = []] of statements) await db.runAsync(sql, params);
+    })
+    .then(() => true);
 
 const toNamedRows = (result) =>
   result.rows._array.map((row) => ({

@@ -1,3 +1,5 @@
+import { DefaultTheme } from "@react-navigation/native";
+
 import { GlobalStyles } from "../constants/styles";
 
 const { colors, type } = GlobalStyles;
@@ -46,9 +48,15 @@ export const tabBarStyleWithInsets = (insets) => ({
 });
 
 // react-navigation theme so the containers/cards behind screens match.
+//
+// Built on DefaultTheme rather than written out: a theme now also carries the
+// `fonts` the header components read, and a hand-written object missing them
+// takes the headers down with it.
 export const appNavigationTheme = {
+  ...DefaultTheme,
   dark: false,
   colors: {
+    ...DefaultTheme.colors,
     primary: colors.primary,
     background: colors.screen,
     card: colors.surface,
