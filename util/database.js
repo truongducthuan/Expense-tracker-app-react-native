@@ -391,7 +391,7 @@ export const getTodoList = () =>
 // UNIQUE(category, period) keeps one budget per category per period type, so
 // re-adding the same pair updates rather than silently duplicating.
 
-const budgetDB = SQLite.openDatabase("budgets.db");
+const budgetDB = SQLite.openDatabaseSync("budgets.db");
 
 const toBudgetRows = (result) =>
   result.rows._array.map((row) => ({
@@ -442,7 +442,7 @@ export const deleteBudgetDB = (id) =>
 // goal only ever needs its running total, and a separate deposits table would
 // have to be reconciled with the expense list to mean anything.
 
-const goalDB = SQLite.openDatabase("goals.db");
+const goalDB = SQLite.openDatabaseSync("goals.db");
 
 const toGoalRows = (result) =>
   result.rows._array.map((row) => ({
