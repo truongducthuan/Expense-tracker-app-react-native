@@ -51,7 +51,10 @@ const AgendaScreen = () => {
 
     return (
       <TouchableOpacity
-        testID={testIDs.agenda.ITEM}
+        // `testIDs` came from react-native-calendars' example code and was
+        // never imported, so rendering this row threw. The screen is unused
+        // today, but it is compiled into the release bundle all the same.
+        testID="agenda-item"
         style={[styles.item, {height: reservation.height}]}
         onPress={() => Alert.alert(reservation.name)}
       >
