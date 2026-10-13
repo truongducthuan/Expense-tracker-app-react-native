@@ -27,7 +27,11 @@ const GoalRow = ({ progress, onPress, onAddMoney, divided }) => {
     if (progress.saved > 0) {
       return t("goal_almost", { amount: money(progress.remaining) });
     }
-    return t("goal_no_pace");
+    // An empty linked goal is filled by moving money into its wallet, not by
+    // a manual top-up, so it must not say "add some money".
+    return progress.linked
+      ? t("goal_linked_empty", { name: progress.account })
+      : t("goal_no_pace");
   };
 
   return (
@@ -59,6 +63,17 @@ const GoalRow = ({ progress, onPress, onAddMoney, divided }) => {
           <Text style={styles.percent}>{progress.percent}%</Text>
         </View>
 
+        {/* A linked goal reads straight off its wallet, so the user knows the
+            number is not something they have to keep updating by hand. */}
+        {progress.linked && (
+          <View style={styles.linkRow}>
+            <Ionicons name="link" size={12} color={colors.primary} />
+            <Text style={styles.linkText} numberOfLines={1}>
+              {t("goal_tracks_account", { name: progress.account })}
+            </Text>
+          </View>
+        )}
+
         <ProgressBar
           ratio={progress.ratio}
           color={progress.complete ? colors.income : colors.primary}
@@ -69,7 +84,7 @@ const GoalRow = ({ progress, onPress, onAddMoney, divided }) => {
         <Text style={styles.subtitle}>{subtitle()}</Text>
       </Pressable>
 
-      {!progress.complete && (
+      {!progress.complete && !progress.linked && (
         <Pressable
           onPress={onAddMoney}
           accessibilityRole="button"
@@ -102,6 +117,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing[3],
+  },
+  linkRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  linkText: {
+    fontSize: 11.5,
+    color: colors.primary,
+    flexShrink: 1,
   },
   icon: {
     width: 36,

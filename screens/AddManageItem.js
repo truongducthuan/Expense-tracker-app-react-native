@@ -1,5 +1,13 @@
 import { useLayoutEffect, useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import PrimaryInput from "../components/ui/PrimaryInput";
@@ -22,6 +30,8 @@ import {
 } from "../util/database";
 import { CategoryIncomeStore } from "../store/incomeCategory";
 import { useLanguage } from "../store/languageContext";
+import { useDialog } from "../store/dialogContext";
+import { useSync } from "../store/syncContext";
 
 const { colors, spacing, radius, type } = GlobalStyles;
 
@@ -36,6 +46,8 @@ const AddManageItem = ({ route, navigation }) => {
   const { categoriesIncome, addCategoriesIncome, editCategoriesIncome } =
     CategoryIncomeStore();
   const { t, lang } = useLanguage();
+  const { alert } = useDialog();
+  const { publish } = useSync();
 
   const [valueInput, setValueInput] = useState("");
   const [icon, setIcon] = useState(null);
@@ -78,7 +90,7 @@ const AddManageItem = ({ route, navigation }) => {
 
   const handleChange = async () => {
     if (!valueInput.trim().length || !name) {
-      Alert.alert(t("invalid_input"), t("please_check_input"));
+      alert({ title: t("invalid_input"), message: t("please_check_input"), tone: "warning" });
       return;
     }
 
@@ -103,10 +115,23 @@ const AddManageItem = ({ route, navigation }) => {
         const newId = await addAccountDB(valueInput, lang, icon);
         addAccount({ name: valueInput, id: newId, icon });
       }
+      const table = name.includes("Income")
+        ? "categories_income"
+        : name.includes("Expense")
+        ? "categories_expense"
+        : "accounts";
+      publish(table);
+      // Adding a name clears its tombstone. That has to travel too: a leftover
+      // tombstone on the account would delete the row again on the next sync.
+      publish(`${table}_removed`);
       navigation.goBack();
     } catch (err) {
       if (isDuplicateError(err)) {
-        Alert.alert(t("duplicate_name"), t("name_already_exists"));
+        alert({
+          title: t("duplicate_name"),
+          message: t("name_already_exists"),
+          tone: "warning",
+        });
       } else {
         setError(t("could_not_save"));
         console.error(err);
@@ -129,7 +154,10 @@ const AddManageItem = ({ route, navigation }) => {
   }
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
       <ScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
@@ -208,7 +236,7 @@ const AddManageItem = ({ route, navigation }) => {
           {t("save")}
         </PrimaryButton>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 

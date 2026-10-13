@@ -1,5 +1,7 @@
 import { useState } from "react";
 import {
+  ActivityIndicator,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -13,12 +15,15 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { useNavigation } from "@react-navigation/native";
 
 import Card from "../components/ui/Card";
+import PrimaryButton from "../components/ui/PrimaryButton";
 import SegmentedControl from "../components/ui/SegmentedControl";
 import { GlobalStyles } from "../constants/styles";
 import { CURRENCY_CODES, CURRENCIES } from "../constants/currencies";
 import { useLanguage } from "../store/languageContext";
 import { useCurrency } from "../store/currencyContext";
 import { useReminder } from "../store/reminderContext";
+import { useSync } from "../store/syncContext";
+import { AuthStore } from "../store/authContext";
 
 const { colors, spacing, radius, type } = GlobalStyles;
 
@@ -60,28 +65,55 @@ const Settings = () => {
   const navigation = useNavigation();
   const { lang, setLang, t } = useLanguage();
   const { code, setCurrency } = useCurrency();
-  const { reminder, permissionDenied, setEnabled, setTime } = useReminder();
+  const { reminder, permissionDenied, available, setEnabled, setTime } =
+    useReminder();
+  const { isSyncing, lastResult, syncNow } = useSync();
+  const { user, isAuthenticated } = AuthStore();
 
   const [showTimePicker, setShowTimePicker] = useState(false);
-
-  const notificationContent = {
-    title: t("reminder_title"),
-    body: t("reminder_body"),
-  };
+  const [draftTime, setDraftTime] = useState(null);
 
   const handleToggleReminder = (value) => {
-    setEnabled(value, notificationContent);
-  };
-
-  const handleTimeChange = (event, date) => {
-    // Android fires with type "dismissed" when the user backs out.
-    setShowTimePicker(Platform.OS === "ios");
-    if (event?.type === "dismissed" || !date) return;
-    setTime(date.getHours(), date.getMinutes(), notificationContent);
+    setEnabled(value);
   };
 
   const reminderDate = new Date();
   reminderDate.setHours(reminder.hour, reminder.minute, 0, 0);
+
+  const openPicker = () => {
+    setDraftTime(reminderDate);
+    setShowTimePicker(true);
+  };
+
+  // Android shows the picker as its own dialog and reports the final value, so
+  // the change is committed straight away.
+  const handleAndroidChange = (event, date) => {
+    setShowTimePicker(false);
+    if (event?.type === "dismissed" || !date) return;
+    setTime(date.getHours(), date.getMinutes());
+  };
+
+  // iOS renders the spinner inline and never dismisses itself — it used to be
+  // left on screen with no way out and no way to confirm. It now lives in a
+  // sheet with its own Done button, and the spinner edits a draft so cancelling
+  // leaves the saved time alone.
+  const confirmIosTime = () => {
+    setShowTimePicker(false);
+    if (draftTime) setTime(draftTime.getHours(), draftTime.getMinutes());
+  };
+
+  // Sync runs by itself on sign-in, so this line exists to answer "did it?" —
+  // and the button to retry a sync that failed while the phone was offline,
+  // without making the user sign out and back in.
+  const syncStatus = () => {
+    if (isSyncing) return t("syncing");
+    if (!isAuthenticated) return t("sync_signed_out");
+    if (!lastResult) return t("sync_data_hint");
+    if (!lastResult.ok) return t("sync_failed");
+    return lastResult.direction === "downloaded"
+      ? t("sync_updated")
+      : t("sync_up_to_date");
+  };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -104,15 +136,29 @@ const Settings = () => {
             <Switch
               value={reminder.enabled}
               onValueChange={handleToggleReminder}
+              disabled={!available}
               trackColor={{ false: colors.border, true: colors.primaryLight }}
               thumbColor={reminder.enabled ? colors.primary : colors.surface}
               accessibilityLabel={t("daily_reminder")}
             />
           </View>
 
-          {reminder.enabled && (
+          {/* Expo Go on Android has no notification code in it at all, so the
+              switch would be a dead control. Saying why beats letting someone
+              toggle it and wonder why nothing ever arrives. */}
+          {!available && (
+            <View style={[styles.row, styles.rowDivided, styles.warningRow]}>
+              <Ionicons name="information-circle" size={18} color={colors.infoText} />
+              <View style={styles.rowText}>
+                <Text style={styles.warningTitle}>{t("reminder_needs_build")}</Text>
+                <Text style={styles.rowHint}>{t("reminder_needs_build_hint")}</Text>
+              </View>
+            </View>
+          )}
+
+          {available && reminder.enabled && (
             <Pressable
-              onPress={() => setShowTimePicker(true)}
+              onPress={openPicker}
               accessibilityRole="button"
               style={({ pressed }) => [
                 styles.row,
@@ -150,14 +196,43 @@ const Settings = () => {
           )}
         </Card>
 
-        {showTimePicker && (
+        {showTimePicker && Platform.OS !== "ios" && (
           <DateTimePicker
             value={reminderDate}
             mode="time"
             is24Hour
-            display={Platform.OS === "ios" ? "spinner" : "default"}
-            onChange={handleTimeChange}
+            display="default"
+            onChange={handleAndroidChange}
           />
+        )}
+
+        {Platform.OS === "ios" && (
+          <Modal
+            visible={showTimePicker}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setShowTimePicker(false)}
+          >
+            <View style={styles.pickerOverlay}>
+              <Pressable
+                style={styles.pickerBackdrop}
+                onPress={() => setShowTimePicker(false)}
+              />
+              <View style={styles.pickerSheet}>
+                <Text style={styles.pickerTitle}>{t("reminder_time")}</Text>
+                <DateTimePicker
+                  value={draftTime ?? reminderDate}
+                  mode="time"
+                  is24Hour
+                  display="spinner"
+                  onChange={(_, date) => date && setDraftTime(date)}
+                />
+                <PrimaryButton onPress={confirmIosTime}>
+                  {t("done")}
+                </PrimaryButton>
+              </View>
+            </View>
+          </Modal>
         )}
       </View>
 
@@ -214,6 +289,94 @@ const Settings = () => {
             })}
           </View>
           <Text style={styles.note}>{t("currency_display_note")}</Text>
+        </Card>
+      </View>
+
+      {/* Account ---------------------------------------------------------- */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>{t("account")}</Text>
+        <Card padded={false}>
+          <View style={styles.row}>
+            <View
+              style={[styles.rowIcon, { backgroundColor: colors.primarySurface }]}
+            >
+              <Ionicons name="person" size={19} color={colors.primary} />
+            </View>
+            <View style={styles.rowText}>
+              <Text style={styles.rowTitle}>{t("signed_in_as")}</Text>
+              <Text style={styles.rowHint} numberOfLines={1}>
+                {user?.email || t("sync_signed_out")}
+              </Text>
+            </View>
+          </View>
+
+          {/* Both stores require an app that creates accounts to offer
+              deletion from inside it, and to make it findable. */}
+          {isAuthenticated && (
+            <Pressable
+              onPress={() => navigation.navigate("DeleteAccount")}
+              accessibilityRole="button"
+              android_ripple={{ color: colors.surfaceAlt }}
+              style={({ pressed }) => [
+                styles.row,
+                styles.rowDivided,
+                pressed && styles.pressed,
+              ]}
+            >
+              <View
+                style={[styles.rowIcon, { backgroundColor: colors.expenseSurface }]}
+              >
+                <Ionicons name="trash" size={19} color={colors.expenseText} />
+              </View>
+              <View style={styles.rowText}>
+                <Text style={[styles.rowTitle, { color: colors.expenseText }]}>
+                  {t("delete_account")}
+                </Text>
+                <Text style={styles.rowHint}>{t("delete_account_hint")}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.border} />
+            </Pressable>
+          )}
+        </Card>
+      </View>
+
+      {/* Sync ----------------------------------------------------------- */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>{t("sync")}</Text>
+        <Card>
+          <View style={styles.syncRow}>
+            <View
+              style={[
+                styles.rowIcon,
+                { backgroundColor: colors.primarySurface },
+              ]}
+            >
+              <Ionicons
+                name={lastResult && !lastResult.ok ? "cloud-offline" : "cloud-done"}
+                size={19}
+                color={lastResult && !lastResult.ok ? colors.warningText : colors.primary}
+              />
+            </View>
+            <View style={styles.rowText}>
+              <Text style={styles.rowTitle}>{t("sync_data")}</Text>
+              <Text style={styles.rowHint}>{syncStatus()}</Text>
+            </View>
+            {isSyncing && (
+              <ActivityIndicator size="small" color={colors.primary} />
+            )}
+          </View>
+
+          <PrimaryButton
+            mode="secondary"
+            icon="sync"
+            style={styles.syncButton}
+            onPress={syncNow}
+            disabled={isSyncing || !isAuthenticated}
+          >
+            {isSyncing ? t("syncing") : t("sync_now")}
+          </PrimaryButton>
+
+          <Text style={styles.note}>{t("sync_device_only")}</Text>
         </Card>
       </View>
 
@@ -309,6 +472,15 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     marginTop: 1,
   },
+  syncRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[3],
+    minHeight: 48,
+  },
+  syncButton: {
+    marginTop: spacing[3],
+  },
   rowValue: {
     ...type.bodyEmphasis,
     fontWeight: "600",
@@ -364,5 +536,22 @@ const styles = StyleSheet.create({
   },
   pressed: {
     backgroundColor: colors.surfaceAlt,
+  },
+  pickerOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: "flex-end" },
+  pickerBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(17,24,39,0.45)",
+  },
+  pickerSheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.lg + 4,
+    borderTopRightRadius: radius.lg + 4,
+    padding: spacing[4],
+    gap: spacing[2],
+  },
+  pickerTitle: {
+    ...type.h3,
+    color: colors.text,
+    textAlign: "center",
   },
 });

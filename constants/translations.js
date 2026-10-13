@@ -112,6 +112,7 @@ export const translations = {
       "This transaction will be removed. This cannot be undone.",
     error_occurred: "Something went wrong",
     okay: "Okay",
+    done: "Done",
     saving: "Saving...",
 
     // Settings / profile
@@ -195,6 +196,13 @@ export const translations = {
     goal_complete: "Reached — nice work",
     goal_almost: "Only {amount} to go",
     goal_no_pace: "Add some money to see a finish date",
+    goal_account: "Track with a wallet",
+    goal_manual: "Top up by hand",
+    goal_manual_hint: "You add to this goal yourself.",
+    goal_account_note:
+      "Progress follows the balance of “{name}”. Move money into that wallet and the goal fills up on its own.",
+    goal_tracks_account: "Tracks {name}",
+    goal_linked_empty: "Move money into “{name}” to get started",
 
     // Reminder & currency
     reminder: "Reminder",
@@ -205,8 +213,44 @@ export const translations = {
     reminder_body: "What did you spend today? It takes a few seconds.",
     notifications_blocked: "Notifications are turned off",
     notifications_blocked_hint: "Allow notifications for this app in your device settings, then try again.",
+    reminder_needs_build: "Not available in Expo Go",
+    reminder_needs_build_hint: "Android's Expo Go no longer carries the notification code. The reminder works in a development build and in the published app.",
     currency_unit: "Currency",
     currency_display_note: "Changes how amounts are shown. It does not convert existing figures.",
+
+    // Sync
+    sync: "Sync",
+    sync_data: "Account data",
+    sync_data_hint:
+      "Budgets, goals, categories and wallets follow this account, so they are there on your next device.",
+    sync_now: "Sync now",
+    syncing: "Syncing…",
+    sync_up_to_date: "Everything is on your account",
+    sync_updated: "Brought your account's data down to this device",
+    sync_failed: "Couldn't reach your account. Nothing was lost — this device still has everything.",
+    sync_signed_out: "Sign in to keep this data with your account.",
+    sync_device_only: "Reminder time, currency and language stay on this device.",
+
+    // Account
+    account: "Account",
+    signed_in_as: "Signed in as",
+    password: "Password",
+    delete_account: "Delete account",
+    delete_account_hint: "Removes your account and everything in it.",
+    delete_account_title: "This cannot be undone",
+    delete_account_body: "Deleting your account removes it and all of its data from our servers straight away.",
+    delete_account_item_transactions: "Every transaction you have recorded",
+    delete_account_item_plans: "Your budgets and savings goals",
+    delete_account_item_lists: "Your categories and wallets",
+    delete_account_item_login: "Your sign-in, so this email can be used again from scratch",
+    delete_account_note: "Nothing is kept, and nothing can be restored afterwards. If you only want to sign out, use Log out in the menu instead.",
+    delete_account_google_hint: "You signed in with Google. Deleting here removes everything this app stores about you; your Google account itself is untouched.",
+    delete_account_action: "Delete everything",
+    delete_account_confirm: "Delete your account and all of its data? This cannot be undone.",
+    deleting_account: "Deleting your account…",
+    could_not_delete_account: "Could not delete the account",
+    could_not_delete_account_hint: "Nothing was deleted. Check your connection and try again.",
+    wrong_password: "That password is not right. Enter the password for this account to confirm.",
 
     // Todo
     manage_todo: "Manage Todo",
@@ -327,6 +371,7 @@ export const translations = {
       "Giao dịch này sẽ bị xoá và không thể hoàn tác.",
     error_occurred: "Đã xảy ra lỗi",
     okay: "Đã hiểu",
+    done: "Xong",
     saving: "Đang lưu...",
 
     // Settings / profile
@@ -410,6 +455,13 @@ export const translations = {
     goal_complete: "Đã đạt — tuyệt vời",
     goal_almost: "Chỉ còn {amount} nữa thôi",
     goal_no_pace: "Nạp một ít để thấy ngày dự kiến hoàn thành",
+    goal_account: "Theo dõi bằng ví",
+    goal_manual: "Tự nạp tay",
+    goal_manual_hint: "Bạn tự cộng tiền vào mục tiêu này.",
+    goal_account_note:
+      "Tiến độ bám theo số dư của ví “{name}”. Cứ chuyển tiền vào ví đó là mục tiêu tự đầy lên.",
+    goal_tracks_account: "Theo ví {name}",
+    goal_linked_empty: "Chuyển tiền vào ví “{name}” để bắt đầu",
 
     // Reminder & currency
     reminder: "Nhắc nhở",
@@ -420,8 +472,44 @@ export const translations = {
     reminder_body: "Hôm nay bạn đã tiêu gì? Chỉ mất vài giây để ghi lại.",
     notifications_blocked: "Thông báo đang bị tắt",
     notifications_blocked_hint: "Hãy bật quyền thông báo cho ứng dụng trong cài đặt máy, rồi thử lại.",
+    reminder_needs_build: "Không dùng được trong Expo Go",
+    reminder_needs_build_hint: "Expo Go trên Android không còn kèm phần thông báo. Nhắc nhở vẫn chạy trong bản development build và bản phát hành.",
     currency_unit: "Đơn vị tiền tệ",
     currency_display_note: "Chỉ thay đổi cách hiển thị số tiền, không quy đổi các số liệu đã có.",
+
+    // Sync
+    sync: "Đồng bộ",
+    sync_data: "Dữ liệu của tài khoản",
+    sync_data_hint:
+      "Ngân sách, mục tiêu, danh mục và ví đi theo tài khoản, nên máy nào đăng nhập cũng có.",
+    sync_now: "Đồng bộ ngay",
+    syncing: "Đang đồng bộ…",
+    sync_up_to_date: "Mọi thứ đã nằm trên tài khoản",
+    sync_updated: "Đã tải dữ liệu của tài khoản về máy này",
+    sync_failed: "Không kết nối được tới tài khoản. Không mất gì cả — máy này vẫn còn đủ dữ liệu.",
+    sync_signed_out: "Đăng nhập để dữ liệu này đi theo tài khoản.",
+    sync_device_only: "Giờ nhắc, đơn vị tiền tệ và ngôn ngữ thì giữ riêng trên máy này.",
+
+    // Account
+    account: "Tài khoản",
+    signed_in_as: "Đang đăng nhập bằng",
+    password: "Mật khẩu",
+    delete_account: "Xoá tài khoản",
+    delete_account_hint: "Xoá tài khoản và toàn bộ dữ liệu trong đó.",
+    delete_account_title: "Không thể hoàn tác",
+    delete_account_body: "Xoá tài khoản là xoá luôn tài khoản và toàn bộ dữ liệu của nó khỏi máy chủ, ngay lập tức.",
+    delete_account_item_transactions: "Mọi giao dịch bạn đã ghi",
+    delete_account_item_plans: "Ngân sách và mục tiêu tiết kiệm",
+    delete_account_item_lists: "Danh mục và ví của bạn",
+    delete_account_item_login: "Thông tin đăng nhập — email này có thể đăng ký lại từ đầu",
+    delete_account_note: "Không giữ lại gì và cũng không khôi phục được. Nếu bạn chỉ muốn thoát ra, hãy dùng Đăng xuất trong menu.",
+    delete_account_google_hint: "Bạn đăng nhập bằng Google. Xoá ở đây sẽ xoá mọi thứ ứng dụng này lưu về bạn; tài khoản Google của bạn không bị ảnh hưởng.",
+    delete_account_action: "Xoá tất cả",
+    delete_account_confirm: "Xoá tài khoản và toàn bộ dữ liệu? Không thể hoàn tác.",
+    deleting_account: "Đang xoá tài khoản…",
+    could_not_delete_account: "Không xoá được tài khoản",
+    could_not_delete_account_hint: "Chưa có gì bị xoá. Kiểm tra kết nối rồi thử lại.",
+    wrong_password: "Mật khẩu chưa đúng. Nhập mật khẩu của tài khoản này để xác nhận.",
 
     // Todo
     manage_todo: "Quản lý công việc",

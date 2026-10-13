@@ -9,6 +9,7 @@ import useMoney from "../../hooks/useMoney";
 import { AccountStore } from "../../store/accountContext";
 import { ExpenseStore } from "../../store/context";
 import { useLanguage } from "../../store/languageContext";
+import { useSync } from "../../store/syncContext";
 import { buildAccountBalances } from "../../util/ledger";
 import { fetchAccountDB, restoreAccountDB } from "../../util/database";
 import ReassignSheet from "../popup/ReassignSheet";
@@ -28,6 +29,7 @@ const TotalTypeIncome = () => {
   const { accounts, setAccount } = AccountStore();
   const { t, lang } = useLanguage();
   const { balance } = useMoney();
+  const { publish } = useSync();
   const [restoring, setRestoring] = useState(null);
   const [orphan, setOrphan] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -40,6 +42,8 @@ const TotalTypeIncome = () => {
     try {
       await restoreAccountDB(name);
       setAccount(await fetchAccountDB(lang));
+      publish("accounts");
+      publish("accounts_removed");
       setOrphan(null);
     } catch (err) {
       console.error(err);

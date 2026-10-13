@@ -139,8 +139,15 @@ eas build --profile development --platform ios
 
 **Bước 4**: Khởi động dev server:
 
+open with terminal
+
 ```bash
-npm start
+export EXPO_TOKEN=
+npx expo whoami
+```
+
+```bash
+npx expo start
 ```
 
 Mở app Development Client trên thiết bị → quét QR code hoặc nhập địa chỉ server.
@@ -278,6 +285,47 @@ eas build:list                                    # Xem lịch sử build
 ```
 
 ---
+
+## Cấu hình Firebase (không nằm trong code)
+
+Email đặt lại mật khẩu do Firebase Authentication tự sinh. Ngôn ngữ của email
+được app gửi kèm (`X-Firebase-Locale` trong `api/auth.js`), nhưng tên người gửi,
+tiêu đề và tiêu đề `project-…` chỉ sửa được trong Firebase Console.
+
+**1. Đổi `project-300384576511` thành `MoneyMind`**
+
+[Project settings → General](https://console.firebase.google.com/project/react-native-a2440/settings/general)
+→ **Public-facing name**
+
+Giá trị này xuất hiện ở tiêu đề email, trong thân mail và ở dòng ký tên — sửa
+một chỗ là đổi cả ba.
+
+**2. Sửa mẫu email — thường bị Google khoá**
+
+[Authentication → Templates](https://console.firebase.google.com/project/react-native-a2440/authentication/emails)
+→ Password reset → ✏️
+
+Nhiều project gặp:
+
+> Email template updates are currently unavailable for this project.
+> For assistance with template changes, contact Firebase Support
+
+Đây là khoá phía Google (biện pháp chống phishing áp lên phần lớn project từ
+2023), không phải lỗi cấu hình. Liên hệ Support thường không mở lại. **Bước 1 ở
+trên là cài đặt riêng, không nằm trong trình sửa template, nên vẫn đổi được** —
+và nó đã xử lý phần lớn vấn đề: tiêu đề, thân mail và dòng ký tên.
+
+**Nếu cần email có thiết kế riêng**
+
+Chỉ còn cách tự gửi, vì Firebase không cho dùng HTML tuỳ ý kể cả khi template
+mở khoá:
+
+1. Backend dùng Admin SDK `generatePasswordResetLink(email)` để lấy link
+2. Gửi email HTML của riêng mình qua SendGrid / Resend / SES
+
+Cần: service account key, một chỗ chạy backend (Cloud Functions cần gói Blaze;
+Vercel/Render có bậc miễn phí), và tài khoản ESP. App hiện gọi thẳng REST API
+của Firebase từ client nên chưa có chỗ đặt phần này.
 
 ## Lưu ý
 

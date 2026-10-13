@@ -14,6 +14,7 @@ import {
 } from "../util/database";
 import { CategoryIncomeStore } from "../store/incomeCategory";
 import { AuthStore } from "../store/authContext";
+import { useSync } from "../store/syncContext";
 
 const AllExpense = () => {
   const { refreshExpenses } = ExpenseStore();
@@ -22,6 +23,7 @@ const AllExpense = () => {
   const { setCategoriesIncome } = CategoryIncomeStore();
   const { user, isAuthenticated } = AuthStore();
   const { t, lang } = useLanguage();
+  const { version } = useSync();
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -67,11 +69,13 @@ const AllExpense = () => {
       console.error(err);
     }
   };
+  // `version` changes when a sync has just replaced the local tables, so the
+  // lists reflect the account rather than whatever this device had before.
   useEffect(() => {
     fetCategory();
     fetAccount();
     fetchIncome();
-  }, [lang]);
+  }, [lang, version]);
 
   const { refreshing, handleRefresh } = useRefresh(() =>
     Promise.all([getExpenses(), fetCategory(), fetAccount(), fetchIncome()])

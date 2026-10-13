@@ -1,11 +1,11 @@
 import { useLayoutEffect } from "react";
-import { ScrollView, RefreshControl } from "react-native";
-import { VictoryBar, VictoryChart, VictoryTheme } from "victory-native";
+import { Dimensions, RefreshControl, ScrollView } from "react-native";
 
 import useRefresh from "../hooks/useRefresh";
 import useTodoChartData from "../hooks/useTodoChartData";
 import { ExpenseStore } from "../store/context";
 import HeaderTime from "../components/ui/HeaderTime";
+import BarChart from "../components/charts/BarChart";
 
 function TodoChart({ navigation }) {
   const { valueSelectChart } = ExpenseStore();
@@ -32,14 +32,7 @@ function TodoChart({ navigation }) {
         <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
       }
     >
-      <VictoryChart theme={VictoryTheme.material} domainPadding={{ x: 5 }}>
-        <VictoryBar
-          style={{ data: { fill: "#c43a31" } }}
-          labels={({ datum }) => `y: ${datum.y}`}
-          data={data}
-          animate={{ duration: 2000 }}
-        />
-      </VictoryChart>
+      <BarChart data={data} width={Dimensions.get("window").width} />
     </ScrollView>
   );
 }

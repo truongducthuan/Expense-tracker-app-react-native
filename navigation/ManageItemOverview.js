@@ -1,9 +1,10 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
 import ManageItem from "../screens/ManageItem";
 import IconButton from "../components/ui/IconButton";
-import { baseTabScreenOptions } from "./navigationTheme";
+import { baseTabScreenOptions, tabBarStyleWithInsets } from "./navigationTheme";
 import { useLanguage } from "../store/languageContext";
 
 const Tab = createBottomTabNavigator();
@@ -14,10 +15,12 @@ const ManageAccount = () => <ManageItem name={"account"} />;
 
 const ManageItemOverview = () => {
   const { t } = useLanguage();
+  const insets = useSafeAreaInsets();
   return (
     <Tab.Navigator
       screenOptions={({ navigation, route }) => ({
         ...baseTabScreenOptions,
+        tabBarStyle: tabBarStyleWithInsets(insets),
         headerRight: ({ tintColor }) => (
           <IconButton
             icon="add"

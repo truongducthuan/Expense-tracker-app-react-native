@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useState } from "react";
-import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import DraggableFlatList, {
   ScaleDecorator,
@@ -30,6 +30,8 @@ import {
 import { CategoryIncomeStore } from "../store/incomeCategory";
 import IconButton from "../components/ui/IconButton";
 import { useLanguage } from "../store/languageContext";
+import { useDialog } from "../store/dialogContext";
+import { useSync } from "../store/syncContext";
 
 const { colors, spacing, radius, type } = GlobalStyles;
 
@@ -40,6 +42,8 @@ const ManageItem = ({ name }) => {
     CategoryIncomeStore();
   const navigation = useNavigation();
   const { lang, t } = useLanguage();
+  const { alert, confirm } = useDialog();
+  const { version, publish } = useSync();
   const { expenses, updateExpense } = ExpenseStore();
   const [isLoading, setIsLoading] = useState(true);
   const [pendingDelete, setPendingDelete] = useState(null);
@@ -64,7 +68,7 @@ const ManageItem = ({ name }) => {
         setIsLoading(false);
       }
     })();
-  }, [lang, name]);
+  }, [lang, name, version]);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -83,6 +87,14 @@ const ManageItem = ({ name }) => {
     });
   });
 
+  // Which synced table this screen is editing, so changes can be pushed up.
+  const tableName =
+    name === "expense_category"
+      ? "categories_expense"
+      : name === "income_category"
+      ? "categories_income"
+      : "accounts";
+
   const removeItem = async (id) => {
     try {
       if (name === "expense_category") {
@@ -95,6 +107,10 @@ const ManageItem = ({ name }) => {
         await deleteCategoryIncomeDB(id);
         removeCategoriesIncome(id);
       }
+      publish(tableName);
+      // The deletion is remembered so a seeded default stays deleted; that
+      // record has to travel too, or another device would re-seed it.
+      publish(`${tableName}_removed`);
     } catch (err) {
       console.error(err);
     }
@@ -118,14 +134,11 @@ const ManageItem = ({ name }) => {
     const usage = usageOf(item);
 
     if (!usage.length) {
-      Alert.alert(t("delete"), `${item.name}`, [
-        { text: t("cancel"), style: "cancel" },
-        {
-          text: t("delete"),
-          style: "destructive",
-          onPress: () => removeItem(item.id),
-        },
-      ]);
+      confirm({
+        title: `${t("delete")} “${item.name}”`,
+        confirmLabel: t("delete"),
+        destructive: true,
+      }).then((ok) => ok && removeItem(item.id));
       return;
     }
 
@@ -152,7 +165,7 @@ const ManageItem = ({ name }) => {
       setPendingDelete(null);
     } catch (err) {
       console.error(err);
-      Alert.alert(t("error_occurred"), t("could_not_save"));
+      alert({ title: t("error_occurred"), message: t("could_not_save"), tone: "warning" });
     } finally {
       setIsReassigning(false);
     }
@@ -200,7 +213,9 @@ const ManageItem = ({ name }) => {
         : setAccount;
 
     apply(next);
-    persist(next.map((row) => row.id)).catch((err) => console.error(err));
+    persist(next.map((row) => row.id))
+      .then(() => publish(tableName))
+      .catch((err) => console.error(err));
   };
 
   // Keyboard / screen-reader path. Dragging is a pointer gesture with no

@@ -7,23 +7,44 @@ import {
   translateAccountName,
 } from "../constants/seedNames";
 
-const categoryExpenseDB = SQLite.openDatabase("categories_expense.db");
-const categoryIncomeDB = SQLite.openDatabase("categories_income.db");
-const accountDB = SQLite.openDatabase("accounts.db");
-const todoDB = SQLite.openDatabase("todoList.db");
+// expo-sqlite dropped the callback-based `db.transaction(tx => tx.executeSql())`
+// API. The handles are opened synchronously now, and statements run through
+// runAsync/getAllAsync — see `execute` below, which keeps the old result shape
+// so the rest of this file reads the same as it did.
+const categoryExpenseDB = SQLite.openDatabaseSync("categories_expense.db");
+const categoryIncomeDB = SQLite.openDatabaseSync("categories_income.db");
+const accountDB = SQLite.openDatabaseSync("accounts.db");
+const todoDB = SQLite.openDatabaseSync("todoList.db");
 
-// Promisified executeSql: resolves with the SQL result, rejects with the error.
-const execute = (db, sql, params = []) =>
-  new Promise((resolve, reject) => {
-    db.transaction((tx) => {
-      tx.executeSql(
-        sql,
-        params,
-        (_, result) => resolve(result),
-        (_, err) => reject(err)
-      );
-    });
-  });
+// Rows come back from a different call than writes do, so the statement is
+// sniffed once here. Everything downstream still receives the old WebSQL-ish
+// shape — `res.rows._array`, `res.insertId`, `res.rowsAffected` — which is why
+// the migration didn't have to touch every query in this file.
+const READS = /^\s*(SELECT|PRAGMA|WITH|EXPLAIN)/i;
+
+const execute = async (db, sql, params = []) => {
+  if (READS.test(sql)) {
+    const rows = await db.getAllAsync(sql, params);
+    return { rows: { _array: rows, length: rows.length }, insertId: null, rowsAffected: 0 };
+  }
+  const result = await db.runAsync(sql, params);
+  return {
+    rows: { _array: [], length: 0 },
+    insertId: result.lastInsertRowId,
+    rowsAffected: result.changes,
+  };
+};
+
+// Runs several statements in ONE transaction, so either all of them land or
+// none do. `execute` opens a transaction per statement, which is fine for a
+// single write but not for "empty this table, then refill it": a failure
+// halfway through would commit the emptying and lose the list.
+const executeBatch = (db, statements) =>
+  db
+    .withTransactionAsync(async () => {
+      for (const [sql, params = []] of statements) await db.runAsync(sql, params);
+    })
+    .then(() => true);
 
 const toNamedRows = (result) =>
   result.rows._array.map((row) => ({
@@ -122,6 +143,40 @@ const reconcileLangTags = (db, table, seedsByLang) => {
   );
 };
 
+// Seeded defaults are re-inserted on every start, so deleting one brought it
+// straight back on the next launch — and at the bottom of the list, with a new
+// id. This records the names the user removed deliberately so seeding can skip
+// them. Kept per table, in the same database, so it travels with the data.
+const ensureTombstones = (db, table) =>
+  execute(
+    db,
+    `CREATE TABLE IF NOT EXISTS ${table}_removed (
+      name TEXT PRIMARY KEY NOT NULL
+    )`
+  ).catch((err) => console.error("tombstone table failed:", err));
+
+const rememberRemoved = (db, table, name) =>
+  execute(db, `INSERT OR IGNORE INTO ${table}_removed (name) VALUES (?)`, [name]);
+
+const forgetRemoved = (db, table, name) =>
+  execute(db, `DELETE FROM ${table}_removed WHERE name = ?`, [name]);
+
+// Deletes by id and records the name, so a seeded default stays deleted.
+// Non-seeded names are never re-seeded, so recording them is harmless.
+const deleteAndRemember = (db, table, id) =>
+  execute(db, `SELECT name FROM ${table} WHERE id = ?`, [id])
+    .then((res) => res.rows._array[0]?.name)
+    .then((name) =>
+      execute(db, `DELETE FROM ${table} WHERE id = (?)`, [id]).then(() =>
+        name ? rememberRemoved(db, table, name) : null
+      )
+    );
+
+const removedNames = (db, table) =>
+  execute(db, `SELECT name FROM ${table}_removed`)
+    .then((res) => res.rows._array.map((row) => row.name))
+    .catch(() => []);
+
 const seed = (db, table, names, lang) => {
   const placeholders = names.map(() => "(?, ?)").join(", ");
   const params = names.flatMap((n) => [n, lang]);
@@ -144,11 +199,15 @@ const createNamedTable = (db, table, seedsByLang) =>
     .then(() => ensureIconColumn(db, table))
     .then(() => ensurePositionColumn(db, table))
     .then(() => reconcileLangTags(db, table, seedsByLang))
-    .then(() =>
+    .then(() => ensureTombstones(db, table))
+    .then(() => removedNames(db, table))
+    .then((removed) =>
       Promise.all(
-        Object.entries(seedsByLang).map(([lang, names]) =>
-          seed(db, table, names, lang).catch((err) => console.error(err))
-        )
+        Object.entries(seedsByLang).map(([lang, names]) => {
+          const keep = names.filter((n) => !removed.includes(n));
+          if (!keep.length) return Promise.resolve();
+          return seed(db, table, keep, lang).catch((err) => console.error(err));
+        })
       )
     )
     // Freshly seeded rows arrive without one.
@@ -168,12 +227,13 @@ export const fetchCategoriesExpenseDB = (lang = "en") =>
 // `lang` is accepted for call-site symmetry but deliberately not stored: a
 // category the user typed shows in every language (see ALL_LANGS).
 export const addExpenseCategory = (name, lang = "en", icon = null) =>
+  forgetRemoved(categoryExpenseDB, "categories_expense", name).then(() =>
   execute(
     categoryExpenseDB,
     `INSERT INTO categories_expense (name, lang, icon, position)
        VALUES (?, ?, ?, (SELECT IFNULL(MAX(position), 0) + 1 FROM categories_expense))`,
     [name, ALL_LANGS, icon]
-  ).then((res) => res.insertId);
+  )).then((res) => res.insertId);
 
 export const updateExpenseCategory = (name, id, icon = null) =>
   execute(
@@ -183,7 +243,7 @@ export const updateExpenseCategory = (name, id, icon = null) =>
   );
 
 export const deleteExpenseCategory = (id) =>
-  execute(categoryExpenseDB, "DELETE FROM categories_expense WHERE id = (?)", [id]);
+  deleteAndRemember(categoryExpenseDB, "categories_expense", id);
 
 export const initCategoryIncomeDB = () =>
   createNamedTable(categoryIncomeDB, "categories_income", INCOME_CATEGORIES);
@@ -197,17 +257,18 @@ export const fetchCategoryIncomeDB = (lang = "en") =>
   ).then(toNamedRows));
 
 export const deleteCategoryIncomeDB = (id) =>
-  execute(categoryIncomeDB, "DELETE FROM categories_income WHERE id = (?)", [id]);
+  deleteAndRemember(categoryIncomeDB, "categories_income", id);
 
 // `lang` is accepted for call-site symmetry but deliberately not stored: a
 // category the user typed shows in every language (see ALL_LANGS).
 export const addIncomeCategory = (name, lang = "en", icon = null) =>
+  forgetRemoved(categoryIncomeDB, "categories_income", name).then(() =>
   execute(
     categoryIncomeDB,
     `INSERT INTO categories_income (name, lang, icon, position)
        VALUES (?, ?, ?, (SELECT IFNULL(MAX(position), 0) + 1 FROM categories_income))`,
     [name, ALL_LANGS, icon]
-  ).then((res) => res.insertId);
+  )).then((res) => res.insertId);
 
 export const updateIncomeCategory = (name, id, icon = null) =>
   execute(
@@ -250,10 +311,12 @@ export const restoreAccountDB = (name, icon = null) =>
           new Error(`"${name}" is a default account and cannot be restored`)
         );
       }
-      return execute(accountDB, "UPDATE accounts SET lang = ? WHERE name = ?", [
-        ALL_LANGS,
-        name,
-      ]);
+      return forgetRemoved(accountDB, "accounts", name).then(() =>
+        execute(accountDB, "UPDATE accounts SET lang = ? WHERE name = ?", [
+          ALL_LANGS,
+          name,
+        ])
+      );
     })
     .then((res) =>
       res.rowsAffected > 0
@@ -267,16 +330,17 @@ export const restoreAccountDB = (name, icon = null) =>
     );
 
 export const deleteAccountDB = (id) =>
-  execute(accountDB, "DELETE FROM accounts WHERE id = (?)", [id]);
+  deleteAndRemember(accountDB, "accounts", id);
 
 // As above: user-created accounts are not language-scoped.
 export const addAccountDB = (name, lang = "en", icon = null) =>
+  forgetRemoved(accountDB, "accounts", name).then(() =>
   execute(accountDB, `INSERT INTO accounts (name, lang, icon, position)
        VALUES (?, ?, ?, (SELECT IFNULL(MAX(position), 0) + 1 FROM accounts))`, [
     name,
     ALL_LANGS,
     icon,
-  ]).then((res) => res.insertId);
+  ])).then((res) => res.insertId);
 
 export const updateAccountDB = (name, id, icon = null) =>
   execute(accountDB, "UPDATE accounts SET name = (?), icon = (?) WHERE id = (?)", [
@@ -327,7 +391,7 @@ export const getTodoList = () =>
 // UNIQUE(category, period) keeps one budget per category per period type, so
 // re-adding the same pair updates rather than silently duplicating.
 
-const budgetDB = SQLite.openDatabase("budgets.db");
+const budgetDB = SQLite.openDatabaseSync("budgets.db");
 
 const toBudgetRows = (result) =>
   result.rows._array.map((row) => ({
@@ -378,7 +442,7 @@ export const deleteBudgetDB = (id) =>
 // goal only ever needs its running total, and a separate deposits table would
 // have to be reconciled with the expense list to mean anything.
 
-const goalDB = SQLite.openDatabase("goals.db");
+const goalDB = SQLite.openDatabaseSync("goals.db");
 
 const toGoalRows = (result) =>
   result.rows._array.map((row) => ({
@@ -388,7 +452,13 @@ const toGoalRows = (result) =>
     saved: Number(row.saved),
     deadline: row.deadline || null,
     createdAt: row.createdAt,
+    account: row.account || null,
   }));
+
+// Links a goal to a wallet. Existing goals keep `account` NULL and go on
+// working off manual deposits, so nothing breaks on upgrade.
+const ensureGoalAccountColumn = () =>
+  execute(goalDB, "ALTER TABLE goals ADD COLUMN account TEXT").catch(() => {});
 
 export const initGoalDB = () =>
   execute(
@@ -401,23 +471,25 @@ export const initGoalDB = () =>
       deadline TEXT,
       createdAt TEXT NOT NULL
     )`
-  );
+  ).then(ensureGoalAccountColumn);
 
 export const fetchGoalsDB = () =>
   execute(goalDB, "SELECT * FROM goals ORDER BY id DESC").then(toGoalRows);
 
-export const addGoalDB = (name, target, deadline) =>
+export const addGoalDB = (name, target, deadline, account = null) =>
   execute(
     goalDB,
-    "INSERT INTO goals (name, target, saved, deadline, createdAt) VALUES (?, ?, 0, ?, ?)",
-    [name, target, deadline || null, new Date().toISOString()]
+    `INSERT INTO goals (name, target, saved, deadline, createdAt, account)
+     VALUES (?, ?, 0, ?, ?, ?)`,
+    [name, target, deadline || null, new Date().toISOString(), account]
   ).then((res) => res.insertId);
 
-export const updateGoalDB = (id, name, target, deadline) =>
+export const updateGoalDB = (id, name, target, deadline, account = null) =>
   execute(
     goalDB,
-    "UPDATE goals SET name = (?), target = (?), deadline = (?) WHERE id = (?)",
-    [name, target, deadline || null, id]
+    `UPDATE goals SET name = (?), target = (?), deadline = (?), account = (?)
+     WHERE id = (?)`,
+    [name, target, deadline || null, account, id]
   );
 
 // Deposits clamp at zero so a withdrawal can never drive the goal negative.
@@ -490,3 +562,82 @@ const logAccountState = () =>
       )
     )
     .catch((err) => console.error("account dump failed:", err));
+
+// ---------------------------------------------------------------------------
+// Sync support
+// ---------------------------------------------------------------------------
+
+// Tables that belong to the user rather than the device, so they travel with
+// the account. Reminder time, currency and language stay local on purpose:
+// those describe the device, not the person (a 20:00 nudge on a phone should
+// not start firing on a tablet).
+const DB_BY_TABLE = {
+  categories_expense: categoryExpenseDB,
+  categories_income: categoryIncomeDB,
+  accounts: accountDB,
+  budgets: budgetDB,
+  goals: goalDB,
+};
+
+// The tombstones ride along too; without them a default the user deleted on
+// one device would come back the moment another device seeded itself.
+const TOMBSTONE_TABLES = {
+  categories_expense_removed: categoryExpenseDB,
+  categories_income_removed: categoryIncomeDB,
+  accounts_removed: accountDB,
+};
+
+export const SYNCED_TABLES = [
+  ...Object.keys(DB_BY_TABLE),
+  ...Object.keys(TOMBSTONE_TABLES),
+];
+
+const dbFor = (table) => DB_BY_TABLE[table] || TOMBSTONE_TABLES[table];
+
+const columnsOf = (db, table) =>
+  execute(db, `PRAGMA table_info(${table})`).then((res) =>
+    res.rows._array.map((col) => col.name)
+  );
+
+// Whole-table read. The lists are tens of rows at most, so syncing them as a
+// unit avoids having to reconcile SQLite's autoincrement ids with remote keys.
+export const exportTable = (table) =>
+  dbReady
+    .then(() => execute(dbFor(table), `SELECT * FROM ${table}`))
+    .then((res) => res.rows._array)
+    .catch(() => []);
+
+// Overwrites the table with `rows`, in a single transaction. Refuses a
+// non-array so a failed fetch can never be mistaken for "the user has nothing"
+// and wipe the device.
+export const replaceTable = (table, rows) => {
+  if (!Array.isArray(rows)) return Promise.resolve(false);
+  const db = dbFor(table);
+  if (!db) return Promise.resolve(false);
+
+  return dbReady
+    .then(() => columnsOf(db, table))
+    .then((cols) => {
+      const statements = [[`DELETE FROM ${table}`, []]];
+
+      for (const row of rows) {
+        // Columns this device doesn't have yet (a row written by a newer
+        // version) are skipped rather than inserted as NULL.
+        const present = cols.filter((col) => row[col] !== undefined);
+        if (!present.length) continue;
+        statements.push([
+          `INSERT OR REPLACE INTO ${table} (${present.join(", ")})
+           VALUES (${present.map(() => "?").join(", ")})`,
+          present.map((col) => row[col]),
+        ]);
+      }
+
+      return executeBatch(db, statements);
+    })
+    .then(() => true)
+    .catch((err) => {
+      // The transaction rolled back, so the table still holds what it did.
+      console.error(`replaceTable ${table} failed:`, err);
+      return false;
+    });
+};
