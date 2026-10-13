@@ -51,9 +51,38 @@ const ICONS = {
   "thẻ": "card",
 };
 
+// Names people type often start with an emoji — "🍞 Food", "🐶 Pet", "🛠 Tools"
+// are all in this app's own data. That emoji is the icon they chose for
+// themselves, so it is read out of the name rather than ignored.
+//
+// Letters stay out of it: Vietnamese sits in Latin Extended, below U+2000,
+// while pictographs sit above it. Code points are compared rather than using
+// a \p{...} regex, which not every JS engine this runs on supports.
+const isSymbol = (char) => (char.codePointAt(0) || 0) > 0x2000;
+
+export const getNameEmoji = (name) => {
+  const chars = Array.from(String(name || "").trim());
+  const emoji = [];
+  for (const char of chars) {
+    if (!isSymbol(char)) break;
+    emoji.push(char);
+  }
+  return emoji.join("");
+};
+
+// The same name without its emoji, so "🍞 Food" still finds the Food icon.
+const withoutEmoji = (name) =>
+  Array.from(String(name || "").trim())
+    .slice(Array.from(getNameEmoji(name)).length)
+    .join("")
+    .trim();
+
 export const getCategoryIcon = (name) => {
   if (!name) return null;
-  return ICONS[String(name).trim().toLowerCase()] || null;
+  const exact = ICONS[String(name).trim().toLowerCase()];
+  if (exact) return exact;
+  const stripped = withoutEmoji(name).toLowerCase();
+  return (stripped && ICONS[stripped]) || null;
 };
 
 // Icons offered when creating or renaming a category / account. Grouped by
@@ -80,5 +109,11 @@ export const ICON_CHOICES = [
 ];
 
 // First character, used when no icon matches.
-export const getInitial = (name) =>
-  name ? String(name).trim().charAt(0).toUpperCase() : "?";
+//
+// By code point, not charAt: an emoji is a surrogate pair, and taking half of
+// one renders as a replacement glyph. That is why every emoji-named category
+// in this app showed a "?" tile.
+export const getInitial = (name) => {
+  const first = Array.from(String(name || "").trim())[0];
+  return first ? first.toUpperCase() : "?";
+};

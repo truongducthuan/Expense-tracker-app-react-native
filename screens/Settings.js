@@ -65,7 +65,8 @@ const Settings = () => {
   const navigation = useNavigation();
   const { lang, setLang, t } = useLanguage();
   const { code, setCurrency } = useCurrency();
-  const { reminder, permissionDenied, setEnabled, setTime } = useReminder();
+  const { reminder, permissionDenied, available, setEnabled, setTime } =
+    useReminder();
   const { isSyncing, lastResult, syncNow } = useSync();
   const { user, isAuthenticated } = AuthStore();
 
@@ -135,13 +136,27 @@ const Settings = () => {
             <Switch
               value={reminder.enabled}
               onValueChange={handleToggleReminder}
+              disabled={!available}
               trackColor={{ false: colors.border, true: colors.primaryLight }}
               thumbColor={reminder.enabled ? colors.primary : colors.surface}
               accessibilityLabel={t("daily_reminder")}
             />
           </View>
 
-          {reminder.enabled && (
+          {/* Expo Go on Android has no notification code in it at all, so the
+              switch would be a dead control. Saying why beats letting someone
+              toggle it and wonder why nothing ever arrives. */}
+          {!available && (
+            <View style={[styles.row, styles.rowDivided, styles.warningRow]}>
+              <Ionicons name="information-circle" size={18} color={colors.infoText} />
+              <View style={styles.rowText}>
+                <Text style={styles.warningTitle}>{t("reminder_needs_build")}</Text>
+                <Text style={styles.rowHint}>{t("reminder_needs_build_hint")}</Text>
+              </View>
+            </View>
+          )}
+
+          {available && reminder.enabled && (
             <Pressable
               onPress={openPicker}
               accessibilityRole="button"

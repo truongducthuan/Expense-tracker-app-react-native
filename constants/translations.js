@@ -213,6 +213,8 @@ export const translations = {
     reminder_body: "What did you spend today? It takes a few seconds.",
     notifications_blocked: "Notifications are turned off",
     notifications_blocked_hint: "Allow notifications for this app in your device settings, then try again.",
+    reminder_needs_build: "Not available in Expo Go",
+    reminder_needs_build_hint: "Android's Expo Go no longer carries the notification code. The reminder works in a development build and in the published app.",
     currency_unit: "Currency",
     currency_display_note: "Changes how amounts are shown. It does not convert existing figures.",
 
@@ -470,6 +472,8 @@ export const translations = {
     reminder_body: "Hôm nay bạn đã tiêu gì? Chỉ mất vài giây để ghi lại.",
     notifications_blocked: "Thông báo đang bị tắt",
     notifications_blocked_hint: "Hãy bật quyền thông báo cho ứng dụng trong cài đặt máy, rồi thử lại.",
+    reminder_needs_build: "Không dùng được trong Expo Go",
+    reminder_needs_build_hint: "Expo Go trên Android không còn kèm phần thông báo. Nhắc nhở vẫn chạy trong bản development build và bản phát hành.",
     currency_unit: "Đơn vị tiền tệ",
     currency_display_note: "Chỉ thay đổi cách hiển thị số tiền, không quy đổi các số liệu đã có.",
 

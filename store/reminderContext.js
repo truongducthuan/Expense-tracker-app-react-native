@@ -1,9 +1,9 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as Notifications from "expo-notifications";
 
 import { useLanguage } from "./languageContext";
+import { getNotifications, notificationsAvailable } from "../util/notifications";
 
 const STORAGE_KEY = "dailyReminder";
 
@@ -17,6 +17,10 @@ const ReminderContext = createContext({
   reminder: DEFAULT_REMINDER,
   isReady: false,
   permissionDenied: false,
+  // False inside Expo Go on Android, where the notification code is not part
+  // of the client at all. Settings says so rather than offering a switch that
+  // cannot do anything.
+  available: notificationsAvailable,
   setEnabled: async () => {},
   setTime: async () => {},
 });
@@ -38,7 +42,8 @@ const ReminderProvider = ({ children }) => {
   });
 
   const ensureChannel = async () => {
-    if (Platform.OS !== "android") return;
+    const Notifications = getNotifications();
+    if (!Notifications || Platform.OS !== "android") return;
     await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
       name: t("daily_reminder"),
       importance: Notifications.AndroidImportance.DEFAULT,
@@ -46,6 +51,8 @@ const ReminderProvider = ({ children }) => {
   };
 
   const cancelExisting = async () => {
+    const Notifications = getNotifications();
+    if (!Notifications) return;
     try {
       if (scheduledId.current) {
         await Notifications.cancelScheduledNotificationAsync(scheduledId.current);
@@ -67,6 +74,9 @@ const ReminderProvider = ({ children }) => {
 
   // Cancels any existing reminder, then schedules a daily repeat if enabled.
   const apply = async (next) => {
+    const Notifications = getNotifications();
+    if (!Notifications) return false;
+
     await cancelExisting();
     if (!next.enabled) return true;
 
@@ -166,7 +176,14 @@ const ReminderProvider = ({ children }) => {
 
   return (
     <ReminderContext.Provider
-      value={{ reminder, isReady, permissionDenied, setEnabled, setTime }}
+      value={{
+        reminder,
+        isReady,
+        permissionDenied,
+        available: notificationsAvailable,
+        setEnabled,
+        setTime,
+      }}
     >
       {children}
     </ReminderContext.Provider>
