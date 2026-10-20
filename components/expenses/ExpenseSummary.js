@@ -3,7 +3,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-nati
 import { Ionicons } from "@expo/vector-icons";
 
 import CategoryAvatar from "../ui/CategoryAvatar";
-import { GlobalStyles } from "../../constants/styles";
+import { GlobalStyles, fillParent } from "../../constants/styles";
 import useMoney from "../../hooks/useMoney";
 import { useLanguage } from "../../store/languageContext";
 import { ExpenseStore } from "../../store/context";
@@ -255,9 +255,9 @@ const styles = StyleSheet.create({
     minHeight: 30,
     paddingRight: spacing[2],
   },
-  overlay: { ...StyleSheet.absoluteFillObject, justifyContent: "flex-end" },
+  overlay: { ...fillParent, justifyContent: "flex-end" },
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...fillParent,
     backgroundColor: "rgba(17,24,39,0.45)",
   },
   sheet: {

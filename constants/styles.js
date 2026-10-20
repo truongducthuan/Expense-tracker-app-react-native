@@ -45,6 +45,22 @@ const palette = {
   n0: "#FFFFFF",
 };
 
+// Fills the parent completely.
+//
+// This replaces `StyleSheet.absoluteFillObject`, which React Native removed in
+// 0.86. Spreading something that no longer exists spreads nothing, so every
+// backdrop in the app silently lost its size: no dimming, and — worse — no
+// area left to tap, so "tap outside to close" stopped working everywhere.
+// Only `StyleSheet.absoluteFill` survives, and that is a registered style id,
+// not an object, so it cannot be spread into one.
+export const fillParent = {
+  position: "absolute",
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+};
+
 export const GlobalStyles = {
   colors: {
     ...palette,

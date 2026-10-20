@@ -1,5 +1,10 @@
-import { useLayoutEffect, useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "react-native";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  KeyboardAvoidingView,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
 
 import { GlobalStyles } from "../constants/styles";
 import { CATEGORY_TYPE } from "../constants/config";
@@ -15,6 +20,8 @@ import NavExpense from "../components/expenses/NavExpense";
 import { AuthStore } from "../store/authContext";
 import { useLanguage } from "../store/languageContext";
 import { useDialog } from "../store/dialogContext";
+import useKeyboardVisible from "../hooks/useKeyboardVisible";
+import LayoutProbe from "../components/dev/LayoutProbe";
 
 const { colors, spacing } = GlobalStyles;
 
@@ -34,6 +41,12 @@ const ManageExpense = ({ route, navigation }) => {
   const { alert, confirm } = useDialog();
 
   const expenseId = route.params?.expenseId;
+  const scrollRef = useRef(null);
+  // Set while the description — the last field on the form — holds focus.
+  const bottomFieldFocused = useRef(false);
+  const keyboardVisible = useKeyboardVisible();
+  // TEMPORARY, see components/dev/LayoutProbe.
+  const [probe, setProbe] = useState({ root: 0, scroll: 0, kav: 0 });
   const [isLoading, setIsLoading] = useState(false);
   const [isPopup, setIsPopup] = useState(false);
   const [nameHeader, setNameHeader] = useState("");
@@ -87,6 +100,35 @@ const ManageExpense = ({ route, navigation }) => {
   const handleNav = (nav) => {
     setTitleName(nav);
   };
+
+  // The description sits at the bottom of the form, so the keyboard opens
+  // straight over it. The window shrinks to make room, but nothing was moving
+  // the content, which is how the field people were typing into ended up
+  // underneath the keyboard.
+  //
+  // Scrolling has to happen AFTER the window has shrunk, or it scrolls to the
+  // old, taller bottom and the field stays hidden — so it waits for the
+  // keyboard event rather than guessing a delay. When the keyboard is already
+  // up (moving across from the amount field) there is no event coming, and the
+  // scroll can happen at once.
+  const revealBottomField = () => {
+    bottomFieldFocused.current = true;
+    if (keyboardVisible) scrollRef.current?.scrollToEnd({ animated: true });
+  };
+
+  const releaseBottomField = () => {
+    bottomFieldFocused.current = false;
+  };
+
+  useEffect(() => {
+    if (!keyboardVisible || !bottomFieldFocused.current) return;
+    // One frame after the resize lands, so the new content height is known.
+    const id = setTimeout(
+      () => scrollRef.current?.scrollToEnd({ animated: true }),
+      50
+    );
+    return () => clearTimeout(id);
+  }, [keyboardVisible]);
 
   // Deleting is irreversible here, so it asks first (Nielsen #3 — the prototype
   // offers 5s undo instead; a confirm is the honest equivalent without a
@@ -207,17 +249,49 @@ const ManageExpense = ({ route, navigation }) => {
     !!expensesInput.account.trim();
 
   return (
-    <View style={styles.root}>
+    <View
+      style={styles.root}
+      onLayout={(e) => {
+        // Read it synchronously: the event object is recycled before a state
+        // updater runs, so touching it in there finds nativeEvent already null.
+        const height = e.nativeEvent.layout.height;
+        setProbe((p) => ({ ...p, root: height }));
+      }}
+    >
+      <LayoutProbe
+        rootHeight={probe.root}
+        scrollHeight={probe.scroll}
+        kavHeight={probe.kav}
+      />
+      {/* `padding` on Android too, not just iOS.
+          Measured on a real device: with the keyboard open the window is
+          exactly as tall as with it closed (705dp either way) — Android stopped
+          resizing the window when edge-to-edge became unconditional in SDK 54.
+          The keyboard simply sits on top of the app. Passing no behaviour meant
+          "the OS already made room", which is no longer true, which is why the
+          description field and the buttons ended up underneath it. */}
       <KeyboardAvoidingView
         style={styles.root}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior="padding"
+        onLayout={(e) => {
+          const height = e.nativeEvent.layout.height;
+          setProbe((p) => ({ ...p, kav: height }));
+        }}
       >
         {!isEditing && <NavExpense onPress={handleNav} titleName={titleName} />}
 
         <ScrollView
+          ref={scrollRef}
           style={styles.scroll}
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
+          // Dragging the list away is the other way out of the keyboard,
+          // without having to find the Done key.
+          keyboardDismissMode="on-drag"
+          onLayout={(e) => {
+            const height = e.nativeEvent.layout.height;
+            setProbe((p) => ({ ...p, scroll: height }));
+          }}
         >
           <ExpenseForm
             setExpenses={setExpensesInput}
@@ -225,6 +299,8 @@ const ManageExpense = ({ route, navigation }) => {
             setIsPopup={setIsPopup}
             setNameHeader={setNameHeader}
             titleName={titleName}
+            onFieldFocus={revealBottomField}
+            onFieldBlur={releaseBottomField}
           />
 
           {isEditing && (

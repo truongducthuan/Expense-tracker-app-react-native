@@ -2,7 +2,7 @@ import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import PrimaryButton from "./PrimaryButton";
-import { GlobalStyles } from "../../constants/styles";
+import { GlobalStyles, fillParent } from "../../constants/styles";
 
 const { colors, spacing, radius, type } = GlobalStyles;
 
@@ -80,13 +80,13 @@ export default AppDialog;
 
 const styles = StyleSheet.create({
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...fillParent,
     alignItems: "center",
     justifyContent: "center",
     padding: spacing[5],
   },
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...fillParent,
     backgroundColor: "rgba(17,24,39,0.45)",
   },
   card: {
