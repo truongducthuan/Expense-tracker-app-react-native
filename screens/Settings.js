@@ -17,7 +17,7 @@ import { useNavigation } from "@react-navigation/native";
 import Card from "../components/ui/Card";
 import PrimaryButton from "../components/ui/PrimaryButton";
 import SegmentedControl from "../components/ui/SegmentedControl";
-import { GlobalStyles } from "../constants/styles";
+import { GlobalStyles, fillParent } from "../constants/styles";
 import { CURRENCY_CODES, CURRENCIES } from "../constants/currencies";
 import { useLanguage } from "../store/languageContext";
 import { useCurrency } from "../store/currencyContext";
@@ -537,9 +537,9 @@ const styles = StyleSheet.create({
   pressed: {
     backgroundColor: colors.surfaceAlt,
   },
-  pickerOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: "flex-end" },
+  pickerOverlay: { ...fillParent, justifyContent: "flex-end" },
   pickerBackdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...fillParent,
     backgroundColor: "rgba(17,24,39,0.45)",
   },
   pickerSheet: {

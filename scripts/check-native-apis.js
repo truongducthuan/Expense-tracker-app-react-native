@@ -17,7 +17,12 @@ let problems = 0;
 
 // Packages whose surface is worth checking: the native ones, where an API can
 // disappear between SDKs without anything in JS noticing.
+// `react-native` itself belongs here: StyleSheet.absoluteFillObject was
+// removed in 0.86, and spreading something that no longer exists spreads
+// nothing — every backdrop in the app lost its size, its dimming and its tap
+// target, and both bundlers and this check were perfectly happy.
 const WATCHED = [
+  "react-native",
   "expo-sqlite", "expo-notifications", "expo-splash-screen", "expo-status-bar",
   "expo-web-browser", "expo-auth-session", "expo-font", "expo-constants",
   "@react-native-async-storage/async-storage", "@react-native-community/datetimepicker",
@@ -106,6 +111,13 @@ for (const file of files) {
 
   const namespaces = new Map(); // local name -> package
   const named = [];             // [package, imported, local]
+  // Named imports that are used like namespaces — StyleSheet.create,
+  // Platform.OS, Keyboard.dismiss. Members on these are checked too.
+  const NAMESPACE_LIKE = new Set([
+    "StyleSheet", "Platform", "Dimensions", "Keyboard", "Appearance",
+    "PixelRatio", "InteractionManager", "Linking", "NativeModules",
+    "AccessibilityInfo", "Animated", "Easing", "Share", "Vibration",
+  ]);
 
   traverse(ast, {
     ImportDeclaration(p) {
@@ -113,7 +125,10 @@ for (const file of files) {
       if (!WATCHED.includes(pkg)) return;
       for (const s of p.node.specifiers) {
         if (s.type === "ImportNamespaceSpecifier") namespaces.set(s.local.name, pkg);
-        else if (s.type === "ImportSpecifier") named.push([pkg, s.imported.name, s.local.name]);
+        else if (s.type === "ImportSpecifier") {
+          named.push([pkg, s.imported.name, s.local.name]);
+          if (NAMESPACE_LIKE.has(s.imported.name)) namespaces.set(s.local.name, pkg);
+        }
       }
     },
   });

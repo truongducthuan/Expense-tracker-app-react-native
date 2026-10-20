@@ -2,6 +2,7 @@ import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { GlobalStyles } from "../../constants/styles";
+import useKeyboardVisible from "../../hooks/useKeyboardVisible";
 
 const { colors, spacing } = GlobalStyles;
 
@@ -18,12 +19,16 @@ const { colors, spacing } = GlobalStyles;
 // it lives here so the next screen with a bottom bar cannot forget it.
 const ActionBar = ({ children, style }) => {
   const insets = useSafeAreaInsets();
+  // While the keyboard is up it covers the navigation bar, so reserving space
+  // for that bar as well leaves a dead strip between the buttons and the
+  // keyboard — which is most of the empty gap under Cancel/Add on Android.
+  const keyboardVisible = useKeyboardVisible();
 
   return (
     <View
       style={[
         styles.bar,
-        { paddingBottom: spacing[4] + insets.bottom },
+        { paddingBottom: spacing[4] + (keyboardVisible ? 0 : insets.bottom) },
         style,
       ]}
     >

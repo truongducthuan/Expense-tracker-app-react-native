@@ -1,5 +1,12 @@
 import { useState, useEffect } from "react";
-import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Keyboard,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { Calendar } from "react-native-calendars";
 
 import PrimaryInput from "./ui/PrimaryInput";
@@ -24,6 +31,8 @@ const ExpenseForm = ({
   setIsPopup,
   setNameHeader,
   titleName,
+  onFieldFocus,
+  onFieldBlur,
 }) => {
   const { t } = useLanguage();
   const { symbol } = useMoney();
@@ -48,7 +57,12 @@ const ExpenseForm = ({
     setExpenses((state) => ({ ...state, desc: e }));
   };
 
+  // The pickers slide up from the bottom. Opening one while the amount field
+  // still had focus left the keyboard where it was, so the sheet had to fit in
+  // the sliver above it — which is why the list of categories came up squashed
+  // against the top of the keyboard.
   const openPicker = (field) => {
+    Keyboard.dismiss();
     setNameHeader(field);
     setIsPopup(true);
   };
@@ -109,6 +123,7 @@ const ExpenseForm = ({
 
       <Pressable
         onPress={() => {
+          Keyboard.dismiss();
           setIsPopup(false);
           setIsShowDate(true);
         }}
@@ -121,6 +136,9 @@ const ExpenseForm = ({
         />
       </Pressable>
 
+      {/* Last field on the form, so the keyboard lands right on top of it.
+          The screen scrolls it back into view — the window shrinks to make
+          room for the keyboard, but nothing was moving the content. */}
       <PrimaryInput
         label={t("description")}
         textInputConfig={{
@@ -129,6 +147,8 @@ const ExpenseForm = ({
           autoCorrect: false,
           autoCapitalize: "none",
           onPressIn: () => setIsPopup(false),
+          onFocus: () => onFieldFocus?.(),
+          onBlur: () => onFieldBlur?.(),
         }}
         value={expenses.desc}
       />

@@ -13,7 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import CategoryAvatar from "../ui/CategoryAvatar";
 import PrimaryButton from "../ui/PrimaryButton";
-import { GlobalStyles } from "../../constants/styles";
+import { GlobalStyles, fillParent } from "../../constants/styles";
 import { useLanguage } from "../../store/languageContext";
 
 const { colors, spacing, radius, type } = GlobalStyles;
@@ -157,9 +157,9 @@ const ReassignSheet = ({
 export default ReassignSheet;
 
 const styles = StyleSheet.create({
-  overlay: { ...StyleSheet.absoluteFillObject, justifyContent: "flex-end" },
+  overlay: { ...fillParent, justifyContent: "flex-end" },
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...fillParent,
     backgroundColor: "rgba(17,24,39,0.45)",
   },
   sheet: {
