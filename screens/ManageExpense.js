@@ -21,7 +21,6 @@ import { AuthStore } from "../store/authContext";
 import { useLanguage } from "../store/languageContext";
 import { useDialog } from "../store/dialogContext";
 import useKeyboardVisible from "../hooks/useKeyboardVisible";
-import LayoutProbe from "../components/dev/LayoutProbe";
 
 const { colors, spacing } = GlobalStyles;
 
@@ -45,8 +44,6 @@ const ManageExpense = ({ route, navigation }) => {
   // Set while the description — the last field on the form — holds focus.
   const bottomFieldFocused = useRef(false);
   const keyboardVisible = useKeyboardVisible();
-  // TEMPORARY, see components/dev/LayoutProbe.
-  const [probe, setProbe] = useState({ root: 0, scroll: 0, kav: 0 });
   const [isLoading, setIsLoading] = useState(false);
   const [isPopup, setIsPopup] = useState(false);
   const [nameHeader, setNameHeader] = useState("");
@@ -249,20 +246,7 @@ const ManageExpense = ({ route, navigation }) => {
     !!expensesInput.account.trim();
 
   return (
-    <View
-      style={styles.root}
-      onLayout={(e) => {
-        // Read it synchronously: the event object is recycled before a state
-        // updater runs, so touching it in there finds nativeEvent already null.
-        const height = e.nativeEvent.layout.height;
-        setProbe((p) => ({ ...p, root: height }));
-      }}
-    >
-      <LayoutProbe
-        rootHeight={probe.root}
-        scrollHeight={probe.scroll}
-        kavHeight={probe.kav}
-      />
+    <View style={styles.root}>
       {/* `padding` on Android too, not just iOS.
           Measured on a real device: with the keyboard open the window is
           exactly as tall as with it closed (705dp either way) — Android stopped
@@ -273,10 +257,6 @@ const ManageExpense = ({ route, navigation }) => {
       <KeyboardAvoidingView
         style={styles.root}
         behavior="padding"
-        onLayout={(e) => {
-          const height = e.nativeEvent.layout.height;
-          setProbe((p) => ({ ...p, kav: height }));
-        }}
       >
         {!isEditing && <NavExpense onPress={handleNav} titleName={titleName} />}
 
@@ -288,10 +268,6 @@ const ManageExpense = ({ route, navigation }) => {
           // Dragging the list away is the other way out of the keyboard,
           // without having to find the Done key.
           keyboardDismissMode="on-drag"
-          onLayout={(e) => {
-            const height = e.nativeEvent.layout.height;
-            setProbe((p) => ({ ...p, scroll: height }));
-          }}
         >
           <ExpenseForm
             setExpenses={setExpensesInput}
