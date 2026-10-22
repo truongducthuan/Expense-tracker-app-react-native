@@ -1,7 +1,6 @@
 import {
   Image,
   KeyboardAvoidingView,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -9,6 +8,7 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import PrimaryInput from "../ui/PrimaryInput";
 import PrimaryButton from "../ui/PrimaryButton";
@@ -29,14 +29,23 @@ const AuthForm = ({
   googleReady,
 }) => {
   const { t } = useLanguage();
+  // The header is hidden here and Android draws edge to edge, so nothing else
+  // keeps the language switch out from under the status bar or the last link
+  // off the navigation bar.
+  const insets = useSafeAreaInsets();
 
   return (
-    <KeyboardAvoidingView
-      style={styles.root}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
+    // `padding` on Android too: since edge-to-edge the window no longer
+    // resizes for the keyboard, so leaving it undefined hid the fields.
+    <KeyboardAvoidingView style={styles.root} behavior="padding">
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingTop: insets.top + spacing[3],
+            paddingBottom: insets.bottom + spacing[6],
+          },
+        ]}
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.topBar}>
@@ -135,8 +144,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flexGrow: 1,
-    padding: spacing[4],
-    paddingBottom: spacing[6],
+    paddingHorizontal: spacing[4],
   },
   topBar: {
     alignItems: "flex-end",

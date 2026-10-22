@@ -6,10 +6,12 @@ import * as SplashScreen from "expo-splash-screen";
 import { baseHeaderOptions } from "./navigationTheme";
 import { AuthStore } from "../store/authContext";
 import { useLanguage } from "../store/languageContext";
+import useDarkStatusBar from "../hooks/useDarkStatusBar";
 
 import DrawerNavigator from "./DrawerNavigator";
 import ManageItemOverview from "./ManageItemOverview";
 import Authentication from "../screens/Authentication";
+import ForgotPassword from "../screens/ForgotPassword";
 import ManageExpense from "../screens/ManageExpense";
 import AddManageItem from "../screens/AddManageItem";
 import AnualYear from "../screens/AnualYear";
@@ -22,9 +24,11 @@ const Stack = createNativeStackNavigator();
 const AuthStack = createNativeStackNavigator();
 
 function AuthenticationApp() {
+  useDarkStatusBar();
   return (
     <AuthStack.Navigator screenOptions={{ headerShown: false }}>
       <AuthStack.Screen name="Authentication" component={Authentication} />
+      <AuthStack.Screen name="ForgotPassword" component={ForgotPassword} />
     </AuthStack.Navigator>
   );
 }
