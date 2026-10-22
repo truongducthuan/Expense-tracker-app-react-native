@@ -19,6 +19,7 @@ import ManageBudget from "../screens/ManageBudget";
 import ManageGoal from "../screens/ManageGoal";
 import ManagerTodo from "../components/todoList/ManagerTodo";
 import DeleteAccount from "../screens/DeleteAccount";
+import BudgetAlertWatcher from "../components/plan/BudgetAlertWatcher";
 
 const Stack = createNativeStackNavigator();
 const AuthStack = createNativeStackNavigator();
@@ -35,7 +36,16 @@ function AuthenticationApp() {
 
 function Navigation() {
   const { isAuthenticated } = AuthStore();
-  return isAuthenticated ? <DrawerNavigator /> : <AuthenticationApp />;
+  if (!isAuthenticated) return <AuthenticationApp />;
+  // Lives here rather than inside DrawerNavigator: the drawer is mounted twice
+  // after a fresh login (here and as the DrawNavigation screen), and two
+  // watchers would send every alert twice.
+  return (
+    <>
+      <BudgetAlertWatcher />
+      <DrawerNavigator />
+    </>
+  );
 }
 
 function Root() {
