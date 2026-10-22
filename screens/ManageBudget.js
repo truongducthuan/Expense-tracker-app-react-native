@@ -23,6 +23,7 @@ import { useLanguage } from "../store/languageContext";
 import { useDialog } from "../store/dialogContext";
 import { useSync } from "../store/syncContext";
 import { addBudgetDB, updateBudgetDB, deleteBudgetDB } from "../util/database";
+import { requestBudgetAlertPermission } from "../util/budgetAlerts";
 import { formatInput, formatAmount } from "../util/format";
 import { expenseCategoryKey } from "../constants/seedNames";
 import useMoney from "../hooks/useMoney";
@@ -117,6 +118,8 @@ const ManageBudget = ({ route, navigation }) => {
         addBudget({ id, category, amount: numericAmount, period, threshold });
       }
       publish("budgets");
+      // The threshold above is a promise to notify; make sure it can be kept.
+      await requestBudgetAlertPermission();
       navigation.goBack();
     } catch (err) {
       console.error(err);

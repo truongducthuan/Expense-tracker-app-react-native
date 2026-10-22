@@ -6,10 +6,12 @@ import * as SplashScreen from "expo-splash-screen";
 import { baseHeaderOptions } from "./navigationTheme";
 import { AuthStore } from "../store/authContext";
 import { useLanguage } from "../store/languageContext";
+import useDarkStatusBar from "../hooks/useDarkStatusBar";
 
 import DrawerNavigator from "./DrawerNavigator";
 import ManageItemOverview from "./ManageItemOverview";
 import Authentication from "../screens/Authentication";
+import ForgotPassword from "../screens/ForgotPassword";
 import ManageExpense from "../screens/ManageExpense";
 import AddManageItem from "../screens/AddManageItem";
 import AnualYear from "../screens/AnualYear";
@@ -17,21 +19,33 @@ import ManageBudget from "../screens/ManageBudget";
 import ManageGoal from "../screens/ManageGoal";
 import ManagerTodo from "../components/todoList/ManagerTodo";
 import DeleteAccount from "../screens/DeleteAccount";
+import BudgetAlertWatcher from "../components/plan/BudgetAlertWatcher";
 
 const Stack = createNativeStackNavigator();
 const AuthStack = createNativeStackNavigator();
 
 function AuthenticationApp() {
+  useDarkStatusBar();
   return (
     <AuthStack.Navigator screenOptions={{ headerShown: false }}>
       <AuthStack.Screen name="Authentication" component={Authentication} />
+      <AuthStack.Screen name="ForgotPassword" component={ForgotPassword} />
     </AuthStack.Navigator>
   );
 }
 
 function Navigation() {
   const { isAuthenticated } = AuthStore();
-  return isAuthenticated ? <DrawerNavigator /> : <AuthenticationApp />;
+  if (!isAuthenticated) return <AuthenticationApp />;
+  // Lives here rather than inside DrawerNavigator: the drawer is mounted twice
+  // after a fresh login (here and as the DrawNavigation screen), and two
+  // watchers would send every alert twice.
+  return (
+    <>
+      <BudgetAlertWatcher />
+      <DrawerNavigator />
+    </>
+  );
 }
 
 function Root() {

@@ -1,11 +1,10 @@
-import { useCallback, useState, useLayoutEffect } from "react";
-import { useFocusEffect, useNavigation } from "@react-navigation/native";
-import { setStatusBarStyle } from "expo-status-bar";
+import { useState, useLayoutEffect } from "react";
+import { useNavigation } from "@react-navigation/native";
 
 import Loading from "../components/ui/Loading";
 import ErrorOverlay from "../components/ui/ErrorOverlay";
 import AuthForm from "../components/auth/AuthForm";
-import { loginApi, signUpApi, sendPasswordResetApi } from "../api/auth";
+import { loginApi, signUpApi } from "../api/auth";
 import { AuthStore } from "../store/authContext";
 import useGoogleAuth from "../hooks/useGoogleAuth";
 import { useLanguage } from "../store/languageContext";
@@ -16,7 +15,7 @@ const EMPTY_FORM = { email: "", password: "" };
 const Authentication = () => {
   const navigation = useNavigation();
   const { login } = AuthStore();
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
   const { alert } = useDialog();
 
   const [isLogin, setIsLogin] = useState(true);
@@ -41,39 +40,15 @@ const Authentication = () => {
     navigation.setOptions({ headerShown: false });
   }, [navigation]);
 
-  // Everywhere else the screen starts with a teal header, so the clock and
-  // battery are drawn light. Here the background is the pale mint one, and
-  // light-on-mint made them all but invisible — about 1.1:1, against the 4.5:1
-  // the rest of this design holds itself to. Dark while this screen has focus,
-  // back to light on the way out.
-  useFocusEffect(
-    useCallback(() => {
-      setStatusBarStyle("dark");
-      return () => setStatusBarStyle("light");
-    }, [])
-  );
-
   const handleChangeField = (name, value) =>
     setValues((prev) => ({ ...prev, [name]: value }));
 
   const handleToggleMode = () => setIsLogin((prev) => !prev);
 
-  const handleForgotPassword = async () => {
-    if (!values.email.includes("@")) {
-      alert({ title: t("email_required"), message: t("enter_email_to_reset"), tone: "warning" });
-      return;
-    }
-    try {
-      await sendPasswordResetApi(values.email, lang);
-      alert({
-        title: t("check_your_email"),
-        message: `${t("reset_link_sent")} ${values.email}.`,
-        tone: "success",
-      });
-    } catch (err) {
-      setErrorMessage(t("could_not_send_reset"));
-    }
-  };
+  // Its own screen, so the reset doesn't borrow the login form's email field
+  // and can hold a resend countdown. Whatever was typed here comes along.
+  const handleForgotPassword = () =>
+    navigation.navigate("ForgotPassword", { email: values.email.trim() });
 
   const handleSubmit = async () => {
     const isValid =
